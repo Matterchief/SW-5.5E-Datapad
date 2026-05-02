@@ -6,7 +6,8 @@
     <title>Player Datapad - SW5.5e</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+        /* Added Rubik Glitch for the Dark Side font */
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Rubik+Glitch&display=swap');
 
         /* Dynamic Theme Variables */
         :root {
@@ -19,17 +20,17 @@
             --hud-deep: #075985;
             --accent: #f59e0b;
             
-            --scanline-intensity: 0.3;
-            --flicker-intensity: 0.2;
-            --static-intensity: 0.5;
+            --scanline-intensity: 0.2;
+            --flicker-intensity: 0.1;
+            --static-intensity: 0.1;
         }
 
         /* Faction Skins */
         [data-skin="empire"]   { --hud:#ef4444; --hud-glow:rgba(239,68,68,.5); --hud-deep:#7f1d1d; --accent:#fbbf24; }
-        [data-skin="mando"]    { --hud:#fbbf24; --hud-glow:rgba(251,191,36,.45); --hud-deep:#78350f; --accent:#22d3ee; }
-        [data-skin="sith"]     { --hud:#dc2626; --hud-glow:rgba(220,38,38,.55); --hud-deep:#450a0a; --accent:#f97316; }
+        [data-skin="mando"]    { --hud:#f59e0b; --hud-glow:rgba(245,158,11,.45); --hud-deep:#78350f; --accent:#22d3ee; }
+        [data-skin="sith"]     { --hud:#dc2626; --hud-glow:rgba(220,38,38,.7); --hud-deep:#450a0a; --accent:#f97316; }
         [data-skin="jedi"]     { --hud:#22c55e; --hud-glow:rgba(34,197,94,.45); --hud-deep:#14532d; --accent:#a7f3d0; }
-        [data-skin="republic"] { --hud:#a855f7; --hud-glow:rgba(168,85,247,.45); --hud-deep:#581c87; --accent:#fde047; }
+        [data-skin="rebellion"]{ --hud:#0ea5e9; --hud-glow:rgba(14,165,233,.45); --hud-deep:#075985; --accent:#fde047; }
 
         .text-hud { color: var(--hud); }
         .bg-hud { background-color: var(--hud); }
@@ -45,7 +46,19 @@
         }
 
         .datapad-font { font-family: 'Share Tech Mono', monospace; }
-        .display-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.08em; }
+        .display-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.08em; transition: font-family 0.3s; }
+
+        /* --- DARK SIDE CORRUPTION --- */
+        body.dark-side-active .display-font {
+            font-family: 'Rubik Glitch', cursive;
+            letter-spacing: 0.1em;
+            color: #dc2626 !important;
+            text-shadow: 0 0 12px rgba(220, 38, 38, 0.8), 0 0 24px rgba(220, 38, 38, 0.4) !important;
+        }
+        body.dark-side-active .header,
+        body.dark-side-active .bottom-nav {
+            background: linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(69, 10, 10, 0.95) 100%);
+        }
 
         /* --- HARDWARE AESTHETICS --- */
         .vignette {
@@ -55,7 +68,7 @@
         .header {
             border-bottom: 2px solid var(--hud); box-shadow: 0 0 14px var(--hud-glow);
             background: linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,0.95) 100%);
-            position: relative;
+            position: relative; transition: background 0.5s;
         }
         .header::before, .header::after {
             content:""; position:absolute; bottom:-2px; width:16px; height:10px; border-bottom: 2px solid var(--hud);
@@ -89,10 +102,10 @@
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
             opacity: 0;
         }
-        body.vfx-static .static-burst { animation: static-flash 12s infinite; }
+        body.vfx-static .static-burst { animation: static-flash 8s infinite; }
         @keyframes static-flash {
-            0%, 93% { opacity: 0; } 94% { opacity: calc(0.3 * var(--static-intensity)); }
-            95% { opacity: calc(0.1 * var(--static-intensity)); } 96% { opacity: calc(0.5 * var(--static-intensity)); }
+            0%, 93% { opacity: 0; } 94% { opacity: calc(0.5 * var(--static-intensity)); }
+            95% { opacity: calc(0.2 * var(--static-intensity)); } 96% { opacity: calc(0.8 * var(--static-intensity)); }
             97%, 100% { opacity: 0; }
         }
 
@@ -106,7 +119,7 @@
             background: rgba(2,6,23,0.95); backdrop-filter: blur(10px);
             border-top: 1px solid var(--hud-deep);
             display: flex; justify-content: space-around;
-            padding-bottom: env(safe-area-inset-bottom); z-index: 50;
+            padding-bottom: env(safe-area-inset-bottom); z-index: 50; transition: background 0.5s;
         }
         .nav-btn {
             flex:1; padding: 12px 0; display:flex; flex-direction:column; align-items:center;
@@ -165,16 +178,6 @@
         
         mark.hit { background: color-mix(in srgb, var(--hud) 40%, transparent); color: #fff; padding: 0 2px; border-radius: 2px; }
 
-        .skin-swatch { aspect-ratio: 1; border: 2px solid #1e293b; border-radius: 4px; cursor: pointer; position: relative; overflow: hidden; }
-        .skin-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px currentColor; }
-        .skin-swatch::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, currentColor 0%, currentColor 40%, transparent 60%); opacity: 0.85; }
-        .skin-label {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; text-transform: uppercase;
-            text-align: center; background: rgba(2,6,23,0.85); color: #e2e8f0; padding: 2px 0;
-            z-index: 2; letter-spacing: 0.05em;
-        }
-
         .scale-btn { flex: 1; text-align: center; padding: 8px 0; border: 1px solid #475569; color: #94a3b8; border-radius: 4px; font-weight: bold; transition: all 0.2s; cursor: pointer;}
         .scale-btn.active { background: color-mix(in srgb, var(--hud) 15%, transparent); border-color: var(--hud); color: var(--hud); }
 
@@ -182,6 +185,8 @@
         input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--hud); cursor: pointer; margin-top: -7px; box-shadow: 0 0 8px var(--hud-glow); }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
+        
+        #setting-alignment::-webkit-slider-thumb { background: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); border: 2px solid #000; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .tab-content { animation: fadeIn 0.3s ease-out; }
@@ -317,17 +322,22 @@
                     </div>
                 </div>
 
-                <!-- Theme Selection -->
+                <!-- Force Alignment Master Slider -->
                 <div class="bg-slate-900/50 p-4 rounded border border-slate-800">
-                    <h3 class="text-white font-bold text-lg mb-3">HUD Theme</h3>
-                    <div class="grid grid-cols-6 gap-2" id="skin-grid">
-                        <div class="skin-swatch" style="color:#0ea5e9;" onclick="setTheme('rebellion')" id="btn-theme-rebellion"><span class="skin-label">Rebel</span></div>
-                        <div class="skin-swatch" style="color:#ef4444;" onclick="setTheme('empire')" id="btn-theme-empire"><span class="skin-label">Empire</span></div>
-                        <div class="skin-swatch" style="color:#fbbf24;" onclick="setTheme('mando')" id="btn-theme-mando"><span class="skin-label">Mando</span></div>
-                        <div class="skin-swatch" style="color:#dc2626;" onclick="setTheme('sith')" id="btn-theme-sith"><span class="skin-label">Sith</span></div>
-                        <div class="skin-swatch" style="color:#22c55e;" onclick="setTheme('jedi')" id="btn-theme-jedi"><span class="skin-label">Jedi</span></div>
-                        <div class="skin-swatch" style="color:#a855f7;" onclick="setTheme('republic')" id="btn-theme-republic"><span class="skin-label">Repub</span></div>
+                    <h3 class="text-white font-bold text-lg mb-2 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-hud" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        Force Alignment
+                    </h3>
+                    <p class="text-sm text-slate-400 mb-4">Slide to embrace the Dark Side. Modifies Datapad theme, visual effects, and interface corruption.</p>
+                    
+                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1">
+                        <span class="text-blue-400">Light</span>
+                        <span class="text-amber-500">Balance</span>
+                        <span class="text-red-600">Dark</span>
                     </div>
+                    
+                    <input type="range" id="setting-alignment" min="1" max="5" value="1" step="1" oninput="updateAlignment(this.value)" class="w-full h-2 rounded-full appearance-none outline-none mt-2 mb-2" style="background: linear-gradient(to right, #0ea5e9, #22c55e, #f59e0b, #ea580c, #dc2626);">
+                    <div id="alignment-label" class="text-center text-xs font-bold text-hud mt-3 uppercase tracking-widest datapad-font">Rebellion / Light Side</div>
                 </div>
 
                 <!-- UI Scaling -->
@@ -340,11 +350,11 @@
                     </div>
                 </div>
 
-                <!-- VFX Sliders -->
+                <!-- Advanced VFX Overrides -->
                 <div class="bg-slate-900/50 p-4 rounded border border-slate-800">
                     <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
                         <svg class="w-5 h-5 text-hud" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                        Visual Effects
+                        Advanced Visual Overrides
                     </h3>
                     <div class="space-y-5">
                         <div>
@@ -411,13 +421,13 @@
 
 <script>
     /* =========================================================================
-       STAR WARS 5.5e PLAYER DATAPAD — v4.0 (Fixed Compact & Expanded Spells)
+       STAR WARS 5.5e PLAYER DATAPAD — v5.0 (Dark Side Slider Update)
        ========================================================================= */
 
     // --- STATE & UTILS ---
-    const STORAGE_KEY = "sw5e_datapad_v4";
+    const STORAGE_KEY = "sw5e_datapad_v5";
     let state = {
-        name: "", cls: "", level: 1, skin: "rebellion", scan: 30, static: 50, flicker: 20,
+        name: "", cls: "", level: 1, alignment: 1, skin: "rebellion", scan: 20, static: 10, flicker: 5,
         favorites: { armory: [], spells: [] }, spellLevel: "All", spellMine: false, armoryCat: "All", viewmode: "standard"
     };
 
@@ -465,35 +475,64 @@
     ];
 
     const armoryData = [
-        { cat: "Melee", dnd: "Sun Blade", sw: "Training Lightsaber", dmg: "1d8 Radiant", props: "Finesse, Versatile", weight: "1 lb", cost: "500 cr", desc: "Low-power plasma blade. Sears but rarely amputates.", fullDesc: "A lightsaber whose emitter matrix has been dialed back significantly. It causes searing burns rather than amputation, rendering it safer for Padawans. Still deals radiant (plasma) damage, but lacks the pure cutting power of a true weapon." },
-        { cat: "Melee", dnd: "Vorpal Sword", sw: "True Lightsaber", dmg: "2d8 Radiant", props: "Finesse, Deadly", weight: "1 lb", cost: "Priceless", desc: "The iconic death-dealing machine. Severs limbs on a critical hit.", fullDesc: "A fully weaponized plasma blade powered by a pristine Kyber crystal. It ignores non-magical resistance to slashing damage. On a critical hit (rolling a 20), the immense heat instantly cauterizes as it completely severs one of the target's limbs, or instantly destroys non-boss droids." },
+        // --- MELEE WEAPONS ---
+        { cat: "Melee", dnd: "Dagger", sw: "Vibro-dagger", dmg: "1d4 Piercing", props: "Finesse, Light, Thrown (20/60)", weight: "1 lb", cost: "50 cr", desc: "A short, concealable vibrating blade.", fullDesc: "A standard vibro-dagger. Highly concealable and lethal in close quarters. Often carried as a hold-out weapon by spacers and bounty hunters." },
         { cat: "Melee", dnd: "Shortsword", sw: "Vibro-shiv", dmg: "1d6 Piercing", props: "Finesse, Light", weight: "2 lb", cost: "100 cr", desc: "Finesse. Standard smuggler backup weapon. Easily concealed.", fullDesc: "A short, brutal blade equipped with an ultrasonic vibration generator in the hilt. The high-frequency vibrations allow it to slice through flesh and light armor with terrifying ease. Highly favored by street thugs, assassins, and smugglers." },
         { cat: "Melee", dnd: "Longsword", sw: "Vibrosword", dmg: "1d8 Slashing", props: "Versatile (1d10)", weight: "3 lb", cost: "150 cr", desc: "High-frequency vibrating edge cuts through plasteel. The standard mercenary blade.", fullDesc: "The staple weapon of mercenaries across the galaxy. The vibrosword features a long, straight durasteel blade that vibrates at incredibly high frequencies. It can be wielded with one or two hands." },
+        { cat: "Melee", dnd: "Greatsword", sw: "Heavy Vibro-blade", dmg: "2d6 Slashing", props: "Heavy, Two-Handed", weight: "6 lb", cost: "300 cr", desc: "A massive, two-handed vibrating sword.", fullDesc: "A massive vibro-weapon requiring two hands to wield effectively. The sheer kinetic force of the vibrating blade can sheer through light vehicle armor and blast doors." },
         { cat: "Melee", dnd: "Rapier", sw: "Electrostaff", dmg: "1d8 Piercing/Bludgeon", props: "Finesse", weight: "2 lb", cost: "250 cr", desc: "Finesse. Energy-arcing tips, famously used by MagnaGuards.", fullDesc: "A long, balanced staff made of phrik or cortosis alloy, rendering it resistant to lightsaber strikes. Both ends of the staff project lethal electromagnetic energy. Wielded with elegant, precise strikes." },
+        { cat: "Melee", dnd: "Glaive / Halberd", sw: "Force Pike", dmg: "1d10 Slashing", props: "Heavy, Reach, Two-Handed", weight: "6 lb", cost: "400 cr", desc: "Long-reach polearm with a vibrating/electrified tip.", fullDesc: "Standard issue for Emperor's Royal Guards and elite planetary security. Features a long shaft granting extended reach, tipped with a highly lethal vibro-edged or electrified head." },
         { cat: "Melee", dnd: "Maul", sw: "Heavy Shock Maul", dmg: "2d6 Bludgeoning", props: "Heavy, Two-Handed", weight: "10 lb", cost: "200 cr", desc: "Heavy, Two-Handed. Brutal kinetic impact combined with localized EMP bursts.", fullDesc: "A massive, brutal bludgeoning weapon. Upon impact, the heavy head of the maul discharges a violent shock of kinetic and electrical energy. Exceptionally heavy but devastating against armored droids." },
+        { cat: "Melee", dnd: "Whip", sw: "Neuronic Whip", dmg: "1d4 Slashing", props: "Finesse, Reach", weight: "3 lb", cost: "150 cr", desc: "A flexible, electrified whip used by slavers.", fullDesc: "A cruel weapon that delivers a paralyzing neural shock upon striking bare flesh. It possesses incredible reach and can wrap around limbs or weapons." },
+        { cat: "Melee", dnd: "Sun Blade", sw: "Training Lightsaber", dmg: "1d8 Radiant", props: "Finesse, Versatile", weight: "1 lb", cost: "500 cr", desc: "Low-power plasma blade. Sears but rarely amputates.", fullDesc: "A lightsaber whose emitter matrix has been dialed back significantly. It causes searing burns rather than amputation, rendering it safer for Padawans. Still deals radiant (plasma) damage, but lacks the pure cutting power of a true weapon." },
+        { cat: "Melee", dnd: "Vorpal Sword", sw: "True Lightsaber", dmg: "2d8 Radiant", props: "Finesse, Deadly", weight: "1 lb", cost: "Priceless", desc: "The iconic death-dealing machine. Severs limbs on a critical hit.", fullDesc: "A fully weaponized plasma blade powered by a pristine Kyber crystal. It ignores non-magical resistance to slashing damage. On a critical hit (rolling a 20), the immense heat instantly cauterizes as it completely severs one of the target's limbs, or instantly destroys non-boss droids." },
         
+        // --- RANGED WEAPONS ---
+        { cat: "Ranged", dnd: "Dart", sw: "Throwing Knives", dmg: "1d4 Piercing", props: "Finesse, Thrown (20/60)", weight: "0.25 lb", cost: "5 cr", desc: "Balanced blades for throwing.", fullDesc: "Perfectly balanced throwing knives, often magnetically sealed to stick to armor. A favorite of stealth operatives." },
         { cat: "Ranged", dnd: "Hand Crossbow", sw: "Hold-out Blaster", dmg: "1d6 Energy", props: "Ammunition (30/120), Light", weight: "3 lb", cost: "75 cr", desc: "Range 30/120. Concealable, perfect for dual-wielding Scoundrels.", fullDesc: "A miniature blaster pistol designed for concealment. It packs less of a punch than standard military gear but can be fired rapidly with one hand. Ideal for 'shooting first'." },
         { cat: "Ranged", dnd: "Shortbow", sw: "Blaster Pistol", dmg: "1d6 Energy", props: "Ammunition (80/320), Two-Handed", weight: "2 lb", cost: "250 cr", desc: "Range 80/320. Reliable sidearm. Standard issue for Rebel officers.", fullDesc: "The ubiquitous DL-44 or similar standard blaster pistol. Highly reliable, easy to maintain, and effective at medium range. The standard sidearm for officers and smugglers." },
         { cat: "Ranged", dnd: "Light Crossbow", sw: "Blaster Carbine", dmg: "1d8 Energy", props: "Ammunition (80/320), Two-Handed", weight: "5 lb", cost: "500 cr", desc: "Range 80/320. Compact, rapid-fire military rifle used by Stormtroopers.", fullDesc: "A compact version of a heavy blaster rifle, sacrificing extreme range for mobility. The E-11 carbine is the standard issue for Imperial Stormtroopers." },
         { cat: "Ranged", dnd: "Longbow", sw: "Heavy Blaster Rifle", dmg: "1d8 Energy", props: "Ammunition (150/600), Heavy, Two-Handed", weight: "2 lb", cost: "500 cr", desc: "Range 150/600. Heavy, powerful, requires two hands. Used by snipers.", fullDesc: "A long-barreled blaster rifle designed for extreme range and precision. It fires a highly concentrated bolt of plasma. Due to its length and recoil, it requires two hands." },
         { cat: "Ranged", dnd: "Heavy Crossbow", sw: "Bowcaster", dmg: "1d10 Energy", props: "Ammunition (100/400), Heavy, Loading", weight: "18 lb", cost: "800 cr", desc: "Range 100/400. Heavy, Loading. Wookiee weapon firing magnetic quarrels.", fullDesc: "A traditional Wookiee weapon that uses magnetic acceleration to fire explosive quarrels wrapped in plasma energy. Incredibly heavy and possesses massive recoil." },
-        
+        { cat: "Ranged", dnd: "", sw: "Ion Blaster", dmg: "1d8 Lightning", props: "Ammunition (80/320)", weight: "3 lb", cost: "400 cr", desc: "Fires localized EMP blasts. Highly effective against Droids.", fullDesc: "A specialized blaster that fires ionized particles instead of standard plasma. It deals lightning damage. If the target is a Droid or Construct, it must succeed on a DC 13 Constitution save or suffer disadvantage on its next attack." },
+        { cat: "Ranged", dnd: "", sw: "Disruptor Rifle", dmg: "1d12 Necrotic", props: "Ammunition (150/600), Heavy, Loading", weight: "10 lb", cost: "3,000 cr", desc: "Illegal, highly lethal weapon that disintegrates matter.", fullDesc: "A universally banned weapon that tears matter apart at the molecular level. It ignores temporary hit points. If a creature is reduced to 0 hit points by this weapon, it is completely disintegrated." },
+        { cat: "Ranged", dnd: "", sw: "Light Repeating Blaster", dmg: "1d8 Energy", props: "Ammunition (80/320), Heavy, Two-Handed", weight: "15 lb", cost: "1,200 cr", desc: "Suppression weapon with an incredible rate of fire.", fullDesc: "A squad automatic weapon. As an action, you can target a 10-foot cube within normal range. Each creature in the area must succeed on a DC 13 Dexterity saving throw or take standard weapon damage." },
+
+        // --- EXPLOSIVES ---
         { cat: "Explosives", dnd: "Javelin", sw: "Frag Grenade", dmg: "1d6 Piercing", props: "Thrown (30/120)", weight: "1 lb", cost: "50 cr", desc: "Thrown 30/120. Standard anti-personnel shrapnel charge.", fullDesc: "A standard military fragmentation grenade. You can throw it at a target, treating it as a ranged weapon attack. Upon impact, it detonates into lethal shrapnel." },
         { cat: "Explosives", dnd: "Alchemist's Fire", sw: "Incendiary Charge", dmg: "1d4 Fire/turn", props: "Thrown (20)", weight: "1 lb", cost: "500 cr", desc: "Covers target in burning chemical gel. Requires an action to extinguish.", fullDesc: "A flask containing a highly volatile chemical gel that ignites upon exposure to air. On a hit, the target takes 1d4 fire damage at the start of each of its turns until extinguished." },
         { cat: "Explosives", dnd: "Holy Water", sw: "Ion Grenade", dmg: "2d6 Radiant", props: "Thrown (20)", weight: "1 lb", cost: "250 cr", desc: "Specifically designed to scramble circuitry and overload droid combat frames.", fullDesc: "An explosive charge that releases a massive pulse of ionic energy rather than shrapnel. If the target is a Droid, it takes 2d6 radiant (ionic) damage. Harmless to organics." },
-        { cat: "Explosives", dnd: "", sw: "Thermal Detonator", dmg: "3d6 Fire/Force", props: "Thrown (20/60)", weight: "1 lb", cost: "1,500 cr", desc: "Military-grade thermobaric explosive.", fullDesc: "A highly restricted explosive that triggers a localized fusion reaction. Destroys anything in a 10-foot radius. High chance of disintegrating cover." },
-        
-        { cat: "Armor", dnd: "Leather", sw: "Smuggler Jacket", dmg: "11 + Dex Modifier", props: "Light Armor", weight: "10 lb", cost: "100 cr", desc: "Thick, blast-resistant fabrics favored in the Outer Rim.", fullDesc: "A classic spacer's jacket tailored from thick, blast-resistant synthetic fabrics. It provides minimal protection but allows for complete freedom of movement." },
-        { cat: "Armor", dnd: "Breastplate", sw: "Trooper Plasteel", dmg: "14 + Dex Modifier (Max 2)", props: "Medium Armor", weight: "20 lb", cost: "4,000 cr", desc: "Heavy chest piece allowing for unhindered tactical movement.", fullDesc: "A molded plasteel chest plate worn over a flexible body glove. This is the core component of standard military armor. Offers high protection for vital organs." },
-        { cat: "Armor", dnd: "Plate", sw: "Heavy Mandalorian Beskar", dmg: "18 AC", props: "Heavy Armor, Disadvantage Stealth", weight: "65 lb", cost: "15,000 cr", desc: "Full environmental seal, heavy plating. Disadvantage on Stealth.", fullDesc: "The pinnacle of personal defense. Interlocking plates of heavy durasteel or rare Beskar cover the entire body. Includes a fully sealed helmet and environmental systems." },
+        { cat: "Explosives", dnd: "", sw: "Thermal Detonator", dmg: "3d6 Fire/Force", props: "Thrown (20/60)", weight: "1 lb", cost: "1,500 cr", desc: "Military-grade thermobaric explosive.", fullDesc: "A highly restricted explosive that triggers a localized fusion reaction. Destroys anything in a 10-foot radius. High chance of disintegrating cover. Each creature in radius must make a DC 13 Dex save." },
+        { cat: "Explosives", dnd: "Poison Gas (Basic)", sw: "Dioxis Grenade", dmg: "1d4 Poison/turn", props: "Thrown (30/90)", weight: "1 lb", cost: "400 cr", desc: "Releases a 15-foot cloud of highly toxic green gas.", fullDesc: "Releases a dense, green toxic gas in a 15-foot radius. The area is heavily obscured. Any breathing creature that starts its turn in the cloud takes 1d4 poison damage and must make a DC 12 Con save or be Poisoned." },
+        { cat: "Explosives", dnd: "", sw: "Stun Grenade (Flashbang)", dmg: "Status Effect", props: "Thrown (30/90)", weight: "1 lb", cost: "300 cr", desc: "Non-lethal sonic and photic overload.", fullDesc: "Detonates with blinding light and deafening sound in a 10-foot radius. Creatures in the area must succeed on a DC 13 Constitution save or be Blinded and Deafened until the end of their next turn." },
+
+        // --- ARMOR ---
+        { cat: "Armor", dnd: "Padded", sw: "Blast Vest", dmg: "11 + Dex", props: "Light Armor, Disadv. Stealth", weight: "8 lb", cost: "50 cr", desc: "Cheap, bulky padding worn over civilian clothes.", fullDesc: "A heavy, insulated vest providing minimal protection against shrapnel and glancing blaster shots. Its bulk makes it hard to move silently." },
+        { cat: "Armor", dnd: "Leather", sw: "Smuggler Jacket", dmg: "11 + Dex", props: "Light Armor", weight: "10 lb", cost: "100 cr", desc: "Thick, blast-resistant fabrics favored in the Outer Rim.", fullDesc: "A classic spacer's jacket tailored from thick, blast-resistant synthetic fabrics. It provides minimal protection but allows for complete freedom of movement." },
+        { cat: "Armor", dnd: "Studded Leather", sw: "Combat Weave", dmg: "12 + Dex", props: "Light Armor", weight: "13 lb", cost: "450 cr", desc: "Reinforced synthetic weave with micro-plating.", fullDesc: "Flexible armor featuring tiny micro-plates of durasteel sewn directly into a mesh bodysuit. Offers superior light protection for agile fighters." },
+        { cat: "Armor", dnd: "Chain Shirt", sw: "Armored Flight Suit", dmg: "13 + Dex (Max 2)", props: "Medium Armor", weight: "20 lb", cost: "500 cr", desc: "Standard pilot gear with integrated impact plates.", fullDesc: "A pressurized flight suit reinforced with impact-dispersing gel and plasteel plates across the vital organs. Standard issue for starfighter squadrons." },
+        { cat: "Armor", dnd: "Breastplate", sw: "Trooper Plasteel", dmg: "14 + Dex (Max 2)", props: "Medium Armor", weight: "20 lb", cost: "4,000 cr", desc: "Heavy chest piece allowing for unhindered tactical movement.", fullDesc: "A molded plasteel chest plate worn over a flexible body glove. This is the core component of standard military armor. Offers high protection for vital organs." },
+        { cat: "Armor", dnd: "Half Plate", sw: "Assault Armor", dmg: "15 + Dex (Max 2)", props: "Medium Armor, Disadv. Stealth", weight: "40 lb", cost: "7,500 cr", desc: "Heavy plating protecting the torso, joints, and shins.", fullDesc: "Used by heavy infantry and shock troopers. Interlocking plasteel plates cover the majority of the body, restricting movement but offering excellent medium-tier defense." },
+        { cat: "Armor", dnd: "Splint", sw: "Heavy Plasteel", dmg: "17 AC", props: "Heavy Armor, Disadv. Stealth", weight: "60 lb", cost: "2,000 cr", desc: "Bulky, overlapping strips of durasteel.", fullDesc: "An older, bulkier style of heavy armor. Overlapping strips of heavy metal are riveted to a heavy undersuit. Exceptionally noisy and heavy, but highly protective." },
+        { cat: "Armor", dnd: "Plate", sw: "Heavy Mandalorian Beskar", dmg: "18 AC", props: "Heavy Armor, Disadv. Stealth", weight: "65 lb", cost: "15,000 cr", desc: "Full environmental seal, heavy plating. Disadvantage on Stealth.", fullDesc: "The pinnacle of personal defense. Interlocking plates of heavy durasteel or rare Beskar cover the entire body. Includes a fully sealed helmet and environmental systems." },
         { cat: "Armor", dnd: "Shield", sw: "Energy Shield / Riot Shield", dmg: "+2 AC", props: "Shield", weight: "6 lb", cost: "100 cr", desc: "Wrist-mounted deflector screen or Imperial heavy riot plasteel.", fullDesc: "Can be flavored as a heavy, transparent plasteel riot shield or a high-tech, wrist-mounted emitter that projects a localized energy deflector screen." },
         { cat: "Armor", dnd: "", sw: "Personal Deflector Shield", dmg: "Temp HP", props: "Belt", weight: "2 lb", cost: "5,000 cr", desc: "Energy shield belt granting Temporary Hit Points.", fullDesc: "A specialized, rechargeable shield generator worn on a belt. As a bonus action, activate to gain 10 temporary hit points. Requires a short rest to recharge its power cell." },
-        
+        { cat: "Armor", dnd: "Cloak of Protection", sw: "Shadowsilk Cloak", dmg: "+1 AC / +1 Saves", props: "Wondrous Item", weight: "1 lb", cost: "Rare", desc: "A cloak woven from sensor-baffling exotic materials.", fullDesc: "A rare cloak that subtly refracts light and scrambles basic targeting sensors. It grants a +1 bonus to AC and saving throws while worn." },
+
+        // --- GEAR ---
         { cat: "Gear", dnd: "Potion of Healing", sw: "Bacta Stim", dmg: "2d4+2 HP", props: "Consumable", weight: "0.5 lb", cost: "500 cr", desc: "Injector pen that rapidly accelerates cellular repair.", fullDesc: "A pressurized auto-injector filled with refined Bacta fluid. Using an action to administer the stim rapidly accelerates cellular regeneration, healing 2d4 + 2 HP instantly." },
+        { cat: "Gear", dnd: "Healer's Kit", sw: "Medpac", dmg: "Stabilize", props: "10 Uses", weight: "3 lb", cost: "500 cr", desc: "A comprehensive medical kit for field triage.", fullDesc: "Contains bandages, synth-flesh, cauterizers, and minor stimulants. As an action, you can expend one use of the kit to stabilize a creature that has 0 hit points, without needing to make a Wisdom (Medicine) check." },
         { cat: "Gear", dnd: "Thieves' Tools", sw: "Slicer Kit", dmg: "Tool", props: "Tool", weight: "1 lb", cost: "250 cr", desc: "Datapads and security spikes used to bypass blast doors and terminals.", fullDesc: "A specialized kit containing micro-datapads, custom encryption spikes, and localized EMP emitters. Proficiency allows adding your bonus to hack electronic locks or terminals." },
+        { cat: "Gear", dnd: "Crowbar", sw: "Fusion Cutter", dmg: "Tool", props: "Tool / Improvised Weapon", weight: "5 lb", cost: "20 cr", desc: "A heavy industrial cutting torch.", fullDesc: "Used to cut through bulkheads and wreckage. Grants advantage on Strength checks where the cutter's intense heat or leverage can be applied." },
+        { cat: "Gear", dnd: "Torch", sw: "Glowrod", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "10 cr", desc: "Provides bright light in a 20-foot radius.", fullDesc: "A standard, battery-operated illumination device. It casts bright light in a 20-foot radius and dim light for an additional 20 feet. Lasts for hundreds of hours on a single charge." },
+        { cat: "Gear", dnd: "Caltrops", sw: "Mag-Caltrops", dmg: "Hazard", props: "Equipment", weight: "2 lb", cost: "50 cr", desc: "Magnetic spikes that adhere to boots or droid treads.", fullDesc: "As an action, you can spread a bag of mag-caltrops over a 5-foot-square area. Any creature moving through the area must succeed on a DC 15 Dexterity save or stop moving and take 1 piercing damage." },
         { cat: "Gear", dnd: "Rope, Hempen", sw: "Fibercord Grapple", dmg: "Tool", props: "Equipment", weight: "10 lb", cost: "10 cr", desc: "50 feet of ultra-thin, high-tensile fibercord with a magnetic grapnel.", fullDesc: "A spool containing 50 feet of ultra-thin, incredibly strong synthetic fibercord capped with a magnetic grappling hook." },
+        { cat: "Gear", dnd: "Breathing Gear", sw: "Roamer-6 Breath Mask", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "200 cr", desc: "Filters toxic gases and allows underwater breathing.", fullDesc: "A compact rebreather mask that covers the nose and mouth. It filters out common atmospheric toxins (granting advantage against poison gas) and holds a 2-hour supply of oxygen for aquatic use." },
+        { cat: "Gear", dnd: "Rations (1 Day)", sw: "Ration Pack", dmg: "Consumable", props: "Equipment", weight: "2 lb", cost: "5 cr", desc: "High-calorie protein paste and purified water.", fullDesc: "A vacuum-sealed pack of condensed protein cubes, nutritional paste, and a self-heating element. Tastes terrible, but sustains you for one full day." },
+        { cat: "Gear", dnd: "Broom of Flying", sw: "Z-6 Jetpack", dmg: "Mobility", props: "Equipment / Fuel", weight: "20 lb", cost: "5,000 cr", desc: "Provides a flying speed of 50 feet.", fullDesc: "A Mandalorian-style or bounty hunter jetpack. As an action, you can activate the thrusters. It provides a flying speed of 50 feet. It carries enough fuel for 1 hour of continuous flight." },
         { cat: "Gear", dnd: "", sw: "Comlink", dmg: "Tool", props: "Equipment", weight: "0.1 lb", cost: "25 cr", desc: "Standard handheld/wrist communication device.", fullDesc: "A standard communications transceiver. Models range from handheld cylinders to wrist-mounted or helmet-integrated arrays. Works seamlessly within planetary range or in orbit." },
-        { cat: "Gear", dnd: "", sw: "Macrobinoculars", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "100 cr", desc: "Advanced long-range optics with overlays.", fullDesc: "Handheld optical device. Grants advantage on Wisdom (Perception) checks relying on sight at long range. Includes night-vision and thermal overlays." }
+        { cat: "Gear", dnd: "Spyglass", sw: "Electrobinoculars", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "100 cr", desc: "Advanced long-range optics with overlays.", fullDesc: "Handheld optical device. Grants advantage on Wisdom (Perception) checks relying on sight at long range. Includes night-vision, distance readout, and thermal overlays." },
+        { cat: "Gear", dnd: "Sending Stones", sw: "Holocomm Projector", dmg: "Communication", props: "Wondrous Item", weight: "0.5 lb", cost: "Rare", desc: "Allows a brief, real-time holographic conversation.", fullDesc: "A paired set of portable holographic projectors. You can use an action to project a real-time, blue-tinted hologram to the paired device, allowing a conversation of up to 5 minutes anywhere in the galaxy." }
     ];
 
     const classCodeMap = { Sorcerer:"Sor", Wizard:"Wiz", Cleric:"Clr", Druid:"Drd", Bard:"Brd", Paladin:"Pal", Ranger:"Rng", Artificer:"Art", Warlock:"War", Fighter:"Wiz", Rogue:"Wiz", Monk:null };
@@ -611,7 +650,7 @@
                 return false;
             }
             if (!q) return true;
-            return (it.sw + " " + it.dnd + " " + it.dmg + " " + it.desc).toLowerCase().includes(q);
+            return (it.sw + " " + (it.dnd||"") + " " + it.dmg + " " + it.desc).toLowerCase().includes(q);
         });
 
         if (items.length === 0) {
@@ -644,7 +683,12 @@
             </button>
             <div class="card-header-block pr-8 mb-2">
                 <span class="font-bold text-white text-base block leading-tight display-font">${highlight(it.sw, q)}</span>
-                ${dndEquiv}
+                <div class="card-compact-equiv hidden">
+                    ${dndEquiv}
+                </div>
+                <div class="card-desc">
+                    ${dndEquiv}
+                </div>
             </div>
             <div class="text-xs font-bold mb-2 datapad-font card-desc pr-8" style="color: var(--accent);">${escapeHtml(it.dmg)}</div>
             <p class="text-sm text-slate-400 leading-snug card-desc pr-8">${highlight(it.desc, q)}</p>
@@ -698,7 +742,7 @@
             items = items.filter(s => s.lvl === state.spellLevel);
         }
 
-        if (q) items = items.filter(s => (s.sw+" "+s.dnd+" "+s.desc+" "+s.lvl).toLowerCase().includes(q));
+        if (q) items = items.filter(s => (s.sw+" "+(s.dnd||"")+" "+s.desc+" "+s.lvl).toLowerCase().includes(q));
 
         if (items.length === 0) {
             c.innerHTML = `<div class="text-center p-8 text-slate-500"><p class="datapad-font uppercase tracking-widest text-xs">No matching powers found.</p></div>`;
@@ -797,7 +841,8 @@
                         </button>
                         <div class="card-header-block pr-8 mb-2">
                             <span class="font-bold text-white text-base leading-tight display-font block">${item.sw}</span>
-                            ${dndEquiv}
+                            <div class="card-compact-equiv hidden">${dndEquiv}</div>
+                            <div class="card-desc">${dndEquiv}</div>
                         </div>
                         <div class="text-xs font-bold mb-0 font-mono card-desc pr-8" style="color: var(--accent);">${item.dmg}</div>
                     </div>
@@ -818,7 +863,8 @@
                         </button>
                         <div class="card-header-block pr-8 mb-2">
                             <span class="font-bold text-white text-base block display-font leading-tight">${spell.sw}</span>
-                            ${dndEquiv}
+                            <div class="card-compact-equiv hidden">${dndEquiv}</div>
+                            <div class="card-desc">${dndEquiv}</div>
                             <div class="flex items-center mt-2">
                                 <span class="level-badge text-[10px] font-bold px-2 py-0.5 rounded datapad-font shrink-0 uppercase tracking-widest">${spell.lvl}</span>
                             </div>
@@ -959,6 +1005,65 @@
         if(state.spellMine) { renderHolocronFilters(); renderHolocron(); }
     }
 
+    // --- NEW: FORCE ALIGNMENT LOGIC ---
+    function updateAlignment(val) {
+        val = parseInt(val);
+        state.alignment = val;
+        
+        let theme = 'rebellion';
+        let label = 'Rebellion / Light Side';
+        let flick = 10, stat = 10, scan = 20;
+        let isDark = false;
+
+        switch(val) {
+            case 1:
+                theme = 'rebellion'; label = 'Rebellion / Light Side';
+                flick = 5; stat = 5; scan = 15;
+                break;
+            case 2:
+                theme = 'jedi'; label = 'Jedi / Force Light';
+                flick = 15; stat = 15; scan = 25;
+                break;
+            case 3:
+                theme = 'mando'; label = 'Mandalorian / Balanced';
+                flick = 30; stat = 30; scan = 40;
+                break;
+            case 4:
+                theme = 'empire'; label = 'Empire / Dark Leaning';
+                flick = 60; stat = 60; scan = 60;
+                break;
+            case 5:
+                theme = 'sith'; label = 'Sith / Dark Side Corrupted';
+                flick = 100; stat = 100; scan = 80;
+                isDark = true;
+                break;
+        }
+
+        const labelEl = document.getElementById('alignment-label');
+        if(labelEl) {
+            labelEl.innerText = label;
+            labelEl.className = `text-center text-xs font-bold mt-3 uppercase tracking-widest datapad-font text-hud`;
+        }
+        
+        setTheme(theme);
+        
+        updateVFX('flicker-intensity', flick);
+        updateVFX('static-intensity', stat);
+        updateVFX('scanline-intensity', scan);
+
+        if(isDark) {
+            document.body.classList.add('dark-side-active');
+        } else {
+            document.body.classList.remove('dark-side-active');
+        }
+
+        if(document.getElementById('vfx-flicker')) document.getElementById('vfx-flicker').value = flick;
+        if(document.getElementById('vfx-static')) document.getElementById('vfx-static').value = stat;
+        if(document.getElementById('vfx-scanlines')) document.getElementById('vfx-scanlines').value = scan;
+
+        saveState();
+    }
+
     function setTheme(themeName) {
         document.body.setAttribute('data-skin', themeName);
         document.querySelectorAll('.skin-swatch').forEach(btn => btn.classList.remove('active'));
@@ -1000,12 +1105,17 @@
         document.getElementById('setting-level').value = state.level;
         updateIdentity();
 
-        let savedTheme = state.skin;
-        if (savedTheme === 'blue') savedTheme = 'rebellion';
-        if (savedTheme === 'red') savedTheme = 'empire';
-        if (savedTheme === 'amber') savedTheme = 'mando';
-        if (savedTheme === 'green') savedTheme = 'jedi';
-        if (savedTheme) { setTheme(savedTheme); }
+        if (state.alignment) {
+            document.getElementById('setting-alignment').value = state.alignment;
+            updateAlignment(state.alignment);
+        } else {
+            let savedTheme = state.skin;
+            if (savedTheme === 'blue') savedTheme = 'rebellion';
+            if (savedTheme === 'red') savedTheme = 'empire';
+            if (savedTheme === 'amber') savedTheme = 'mando';
+            if (savedTheme === 'green') savedTheme = 'jedi';
+            if (savedTheme) { setTheme(savedTheme); }
+        }
 
         if (state.viewmode) { setViewMode(state.viewmode); }
         if (state.uiscale) { setUIScale(state.uiscale); }
@@ -1016,6 +1126,17 @@
             if(slider) slider.value = val;
             document.documentElement.style.setProperty(`--${effect}-intensity`, val / 100);
         });
+    }
+
+    function toggleSettings() {
+        const modal = document.getElementById('settings-modal');
+        if (modal.classList.contains('hidden')) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
     }
 
     // --- BOOT SEQUENCE LOGIC ---
