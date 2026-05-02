@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Player Datapad - SW5.5e</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&display=swap');
+
+        :root {
+            --bg-base: #020617; /* Slate 950 */
+            --bg-panel: rgba(15, 23, 42, 0.7);
+            --neon-cyan: #0ea5e9;
+            --neon-cyan-glow: rgba(14, 165, 233, 0.5);
+            --neon-amber: #f59e0b;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Scanline Overlay effect for the Datapad feel */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        .datapad-font { font-family: 'Share Tech Mono', monospace; }
+
+        /* Mobile Layout Structure */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh; /* Mobile browser height fix */
+            position: relative;
+            z-index: 10;
+        }
+
+        .header {
+            border-bottom: 2px solid var(--neon-cyan);
+            box-shadow: 0 0 10px var(--neon-cyan-glow);
+            background: linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,1) 100%);
+        }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px; /* Space for nav */
+            scrollbar-width: none; /* Firefox */
+        }
+        .scroll-area::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(14, 165, 233, 0.3);
+            display: flex;
+            justify-content: space-around;
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 50;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 12px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+        .nav-btn.active {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 8px var(--neon-cyan-glow);
+        }
+        .nav-btn svg { width: 24px; height: 24px; margin-bottom: 4px; }
+
+        /* Card Styles */
+        .data-card {
+            background: var(--bg-panel);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-left: 3px solid var(--neon-cyan);
+            border-radius: 4px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .data-card::after {
+            content: "";
+            position: absolute;
+            top: 0; right: 0;
+            width: 30px; height: 30px;
+            background: linear-gradient(225deg, rgba(14,165,233,0.1) 50%, transparent 50%);
+        }
+
+        .level-badge {
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid var(--neon-cyan);
+            color: var(--neon-cyan);
+        }
+
+        .class-tag {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: var(--neon-amber);
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-content { animation: fadeIn 0.3s ease-out; }
+        
+        .blink { animation: blinker 2s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0.3; } }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="header p-3 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-cyan-400 blink" style="box-shadow: 0 0 8px #22d3ee;"></div>
+            <div>
+                <h1 class="text-xl font-bold text-cyan-400 tracking-widest uppercase">Alliance Net</h1>
+                <p class="text-[9px] text-cyan-600 uppercase datapad-font tracking-widest">Op-Guide // Bright Jewel Sector</p>
+            </div>
+        </div>
+        <div class="text-right">
+            <span class="datapad-font text-xs text-slate-500">v5.5.0_SW</span>
+        </div>
+    </header>
+
+    <!-- Scrollable Content Area -->
+    <main class="scroll-area p-4" id="main-content">
+        
+        <!-- TAB: PROFILES (Classes) -->
+        <div id="tab-profiles" class="tab-content">
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-white tracking-wide uppercase border-b border-slate-700 pb-2">Operative Profiles</h2>
+                <p class="text-slate-400 text-sm mt-2 leading-relaxed">Select your 5.5e class base and flavor it using the Star Wars archetypes below.</p>
+            </div>
+            
+            <div id="classes-container" class="space-y-3">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- TAB: ARMORY -->
+        <div id="tab-armory" class="tab-content hidden">
+            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-4 border-b border-slate-800">
+                <h2 class="text-2xl font-bold text-white tracking-wide uppercase mb-3">Armory & Requisitions</h2>
+                <div class="relative">
+                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="search-armory" onkeyup="filterList('armory')" class="w-full bg-slate-900 border border-cyan-900/50 rounded-md pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 text-sm datapad-font" placeholder="Search weapons, armor, gear...">
+                </div>
+            </div>
+            <div id="armory-container">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- TAB: HOLOCRON (Spells) -->
+        <div id="tab-holocron" class="tab-content hidden">
+            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-4 border-b border-slate-800">
+                <h2 class="text-2xl font-bold text-white tracking-wide uppercase mb-3">Jedi Holocron</h2>
+                
+                <div class="flex gap-2 mb-3 overflow-x-auto pb-1 scroll-area">
+                    <button onclick="filterSpells('All')" class="filter-btn bg-cyan-900/30 border border-cyan-800 text-cyan-300 px-3 py-1 rounded text-xs uppercase font-bold whitespace-nowrap active-filter">All</button>
+                    <button onclick="filterSpells('Cantrip')" class="filter-btn bg-slate-800 border border-slate-700 text-slate-400 px-3 py-1 rounded text-xs uppercase font-bold whitespace-nowrap">Cantrip</button>
+                    <button onclick="filterSpells('1st')" class="filter-btn bg-slate-800 border border-slate-700 text-slate-400 px-3 py-1 rounded text-xs uppercase font-bold whitespace-nowrap">Level 1</button>
+                    <button onclick="filterSpells('2nd')" class="filter-btn bg-slate-800 border border-slate-700 text-slate-400 px-3 py-1 rounded text-xs uppercase font-bold whitespace-nowrap">Level 2</button>
+                    <button onclick="filterSpells('3rd')" class="filter-btn bg-slate-800 border border-slate-700 text-slate-400 px-3 py-1 rounded text-xs uppercase font-bold whitespace-nowrap">Level 3</button>
+                </div>
+
+                <div class="relative">
+                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="search-holocron" onkeyup="filterList('holocron')" class="w-full bg-slate-900 border border-cyan-900/50 rounded-md pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 text-sm datapad-font" placeholder="Search force powers or 5e spells...">
+                </div>
+            </div>
+            
+            <div id="holocron-container">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button onclick="switchTab('profiles')" id="nav-profiles" class="nav-btn active">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            <span class="text-[10px] uppercase font-bold tracking-widest">Profiles</span>
+        </button>
+        <button onclick="switchTab('armory')" id="nav-armory" class="nav-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+            <span class="text-[10px] uppercase font-bold tracking-widest">Armory</span>
+        </button>
+        <button onclick="switchTab('holocron')" id="nav-holocron" class="nav-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+            <span class="text-[10px] uppercase font-bold tracking-widest">Holocron</span>
+        </button>
+    </nav>
+</div>
+
+<script>
+    // --- DATABASE: CLASSES ---
+    const classData = [
+        { 
+            dnd: "Fighter", sw: "Mandalorian / Rebel Commando",
+            desc: "The masters of weaponry. Focus on Ranged (Archery fighting style) for blasters, or Melee for Vibro-weapons. Action Surge represents combat adrenaline.",
+            features: "Second Wind (Bacta Injector), Action Surge (Overdrive)."
+        },
+        { 
+            dnd: "Rogue", sw: "Scoundrel / Slicer",
+            desc: "Smugglers and spies. Sneak Attack represents hitting weak points in armor or shooting enemies in the back. Expertise in Thieves' Tools becomes Slicer Kits.",
+            features: "Sneak Attack (Precision Shot), Cunning Action (Tactical Retreat)."
+        },
+        { 
+            dnd: "Paladin", sw: "Jedi Guardian",
+            desc: "The heavy-hitting, armored Jedi. Divine Smite is channeling the Force directly into your lightsaber strikes to melt through durasteel.",
+            features: "Divine Smite (Force Strike), Lay on Hands (Force Mend)."
+        },
+        { 
+            dnd: "Sorcerer", sw: "Force Adept / Sith Inquisitor",
+            desc: "Raw, innate connection to the Force. Metamagic allows you to bend the rules of the Force, twin-casting Force Pushes or silencing your incantations.",
+            features: "Font of Magic (Force Reserves), Metamagic (Force Manipulation)."
+        },
+        { 
+            dnd: "Monk", sw: "Jedi Sentinel / Martial Artist",
+            desc: "Unarmored, agile fighters. Deflect Missiles perfectly translates to batting away blaster bolts with a lightsaber or bare hands (like Vader).",
+            features: "Martial Arts (Teräs Käsi), Ki Points (Force Focus), Deflect Missiles."
+        },
+        { 
+            dnd: "Ranger", sw: "Bounty Hunter / Scout",
+            desc: "Trackers of the Outer Rim. Hunter's Mark is a tracking fob or HUD lock-on. Spells translate easily into high-tech gadgets or traps.",
+            features: "Favored Enemy (Bounty Targets), Hunter's Mark (Target Lock)."
+        },
+        { 
+            dnd: "Artificer", sw: "Droidsmith / Engineer",
+            desc: "Tech wizards. Spells are deployed as mini-droids, wrist-mounted flamethrowers, or specialized grenades. Infusions are weapon modifications.",
+            features: "Magical Tinkering (Tech Jury-Rigging), Infuse Item (Weapon Mods)."
+        }
+    ];
+
+    // --- DATABASE: ARMORY ---
+    const armoryData = [
+        { cat: "Melee", dnd: "Longsword", sw: "Vibrosword", dmg: "1d8 (1d10) Slashing", desc: "High-frequency vibrating edge cuts through plasteel. The standard mercenary blade." },
+        { cat: "Melee", dnd: "Rapier", sw: "Electrostaff", dmg: "1d8 Piercing/Bludgeoning", desc: "Finesse. Energy-arcing tips, famously used by MagnaGuards or Purge Troopers." },
+        { cat: "Melee", dnd: "Shortsword", sw: "Vibro-shiv", dmg: "1d6 Piercing", desc: "Finesse. Standard smuggler backup weapon. Easily concealed." },
+        { cat: "Melee", dnd: "Maul", sw: "Heavy Shock Maul", dmg: "2d6 Bludgeoning", desc: "Heavy, Two-Handed. Brutal kinetic impact combined with localized EMP bursts." },
+        { cat: "Melee", dnd: "Sun Blade (Magic Item)", sw: "Lightsaber", dmg: "1d8+1 Radiant", desc: "Finesse. The elegant weapon of a more civilized age. Cuts through almost anything." },
+        
+        { cat: "Ranged", dnd: "Shortbow", sw: "Blaster Pistol", dmg: "1d6 Energy", desc: "Range 80/320. Reliable sidearm. Standard issue for Rebel officers." },
+        { cat: "Ranged", dnd: "Light Crossbow", sw: "Blaster Carbine", dmg: "1d8 Energy", desc: "Range 80/320. Compact, rapid-fire military rifle used by Stormtroopers." },
+        { cat: "Ranged", dnd: "Longbow", sw: "Heavy Blaster Rifle", dmg: "1d8 Energy", desc: "Range 150/600. Heavy, powerful, requires two hands. Used by snipers and commandos." },
+        { cat: "Ranged", dnd: "Heavy Crossbow", sw: "Bowcaster", dmg: "1d10 Energy", desc: "Range 100/400. Heavy, Loading. Wookiee weapon firing magnetic quarrels." },
+        { cat: "Ranged", dnd: "Hand Crossbow", sw: "Hold-out Blaster", dmg: "1d6 Energy", desc: "Range 30/120. Concealable, perfect for dual-wielding Scoundrels." },
+        
+        { cat: "Explosives", dnd: "Javelin", sw: "Frag Grenade", dmg: "1d6 Piercing", desc: "Thrown 30/120. Standard anti-personnel shrapnel charge." },
+        { cat: "Explosives", dnd: "Alchemist's Fire", sw: "Incendiary Charge", dmg: "1d4 Fire/turn", desc: "Covers target in burning chemical gel. Requires an action to extinguish." },
+        { cat: "Explosives", dnd: "Holy Water", sw: "Ion Grenade", dmg: "2d6 Radiant (vs Droids)", desc: "Specifically designed to scramble circuitry and overload droid combat frames." },
+        
+        { cat: "Armor", dnd: "Leather", sw: "Smuggler Jacket", dmg: "11 + Dex AC", desc: "Thick, blast-resistant fabrics favored in the Outer Rim." },
+        { cat: "Armor", dnd: "Breastplate", sw: "Trooper Plasteel", dmg: "14 + Dex (Max 2)", desc: "Heavy chest piece allowing for unhindered tactical movement." },
+        { cat: "Armor", dnd: "Plate", sw: "Heavy Mandalorian Beskar", dmg: "18 AC", desc: "Full environmental seal, heavy plating. Disadvantage on Stealth." },
+        { cat: "Armor", dnd: "Shield", sw: "Energy Shield / Riot Shield", dmg: "+2 AC", desc: "Wrist-mounted deflector screen or Imperial heavy riot plasteel." },
+        
+        { cat: "Gear", dnd: "Potion of Healing", sw: "Bacta Stim", dmg: "Cures 2d4+2 HP", desc: "Injector pen that rapidly accelerates cellular repair." },
+        { cat: "Gear", dnd: "Thieves' Tools", sw: "Slicer Kit", dmg: "Tool", desc: "Datapads and security spikes used to bypass blast doors and terminals." },
+        { cat: "Gear", dnd: "Rope, Hempen", sw: "Fibercord Grapple", dmg: "Tool", desc: "50 feet of ultra-thin, high-tensile fibercord with a magnetic grapnel." }
+    ];
+
+    // --- DATABASE: HOLOCRON (Spells) ---
+    // Classes abbreviation: S=Sorcerer, W=Wizard, P=Paladin, R=Ranger, B=Bard, C=Cleric, D=Druid, A=Artificer
+    const spellData = [
+        { lvl: "Cantrip", dnd: "Fire Bolt", sw: "Force Combustion", classes: ["S", "W", "A"], desc: "1d10 Fire. Agitate molecules in the air through the Force until they violently ignite (or fire a wrist rocket)." },
+        { lvl: "Cantrip", dnd: "Mage Hand", sw: "Force Pull/Push (Minor)", classes: ["S", "W", "B"], desc: "Telekinetically manipulate small objects, press buttons, or retrieve lightsabers up to 30ft away." },
+        { lvl: "Cantrip", dnd: "Ray of Frost", sw: "Force Chill / Cryo", classes: ["S", "W", "A"], desc: "1d8 Cold, slows movement. Drain thermal energy via the dark side, or spray liquid carbonite." },
+        { lvl: "Cantrip", dnd: "Vicious Mockery", sw: "Mind Trick (Doubt)", classes: ["B"], desc: "1d4 Psychic, Disadv. Plant a seed of deep fear directly into a weak mind." },
+        { lvl: "Cantrip", dnd: "Eldritch Blast", sw: "Focused Force Push", classes: ["Warlock"], desc: "1d10 Force. Unerring telekinetic kinetic blasts. Multiple beams represent rapid combo strikes." },
+        { lvl: "Cantrip", dnd: "Shocking Grasp", sw: "Minor Force Lightning", classes: ["S", "W", "A"], desc: "1d8 Lightning. Prevents reactions. Short-circuit a droid or overload a nervous system." },
+        { lvl: "Cantrip", dnd: "Minor Illusion", sw: "Holographic Decoy", classes: ["B", "S", "W"], desc: "Create a 5ft sound or image. A localized mind trick or deployed hologram projector." },
+        { lvl: "Cantrip", dnd: "Guidance", sw: "Force Premonition", classes: ["C", "D", "A"], desc: "Add 1d4 to a check. Briefly glimpse the immediate future to guide your actions." },
+        
+        { lvl: "1st", dnd: "Magic Missile", sw: "Force Barrage / Missiles", classes: ["S", "W"], desc: "3 darts, 1d4+1 Force. Unerring, rapid telekinetic strikes or homing wrist-munitions." },
+        { lvl: "1st", dnd: "Shield", sw: "Force Barrier / Deflector", classes: ["S", "W"], desc: "+5 AC reaction. Form a localized telekinetic wall to block incoming blaster bolts." },
+        { lvl: "1st", dnd: "Cure Wounds", sw: "Force Heal", classes: ["B", "C", "D", "P", "R"], desc: "1d8 + Mod Healing. Channel the living Force to rapidly knit flesh and bone together." },
+        { lvl: "1st", dnd: "Healing Word", sw: "Force Revitalize", classes: ["B", "C", "D"], desc: "1d4 + Mod (Bonus Action). A surge of Force energy across the battlefield to an ally." },
+        { lvl: "1st", dnd: "Thunderwave", sw: "Force Repulse", classes: ["B", "D", "S", "W"], desc: "2d8 Thunder. 15ft cube. A violent, outward telekinetic burst throwing enemies back." },
+        { lvl: "1st", dnd: "Charm Person", sw: "Jedi Mind Trick", classes: ["B", "D", "S", "W"], desc: "Wis save. Target treats you as friendly. 'These aren't the droids you're looking for.'" },
+        { lvl: "1st", dnd: "Command", sw: "Dominate Mind", classes: ["C", "P"], desc: "Speak a one-word command ('Halt', 'Drop') they must obey. Pure Force compulsion." },
+        { lvl: "1st", dnd: "Feather Fall", sw: "Force Cushion", classes: ["B", "S", "W"], desc: "Reaction. Manipulate gravity around yourself or allies via the Force to land safely." },
+        { lvl: "1st", dnd: "Guiding Bolt", sw: "Target Lock / Force Mark", classes: ["C"], desc: "4d6 Radiant. Next attack has advantage. Paint the target with a tracking laser or Force aura." },
+        { lvl: "1st", dnd: "Hunter's Mark", sw: "Bounty Tracker HUD", classes: ["R"], desc: "Bonus Action. Deal extra 1d6 damage to target. Thermal tracking lock-on." },
+        
+        { lvl: "2nd", dnd: "Hold Person", sw: "Force Stasis / Choke", classes: ["B", "C", "D", "S", "W"], desc: "Wis save. Paralyzes humanoid. Grip them in an invisible, telekinetic hold they cannot break." },
+        { lvl: "2nd", dnd: "Invisibility", sw: "Force Cloak / Stealth Field", classes: ["B", "S", "W", "A"], desc: "Target becomes invisible. Cloud the minds of observers, or activate a light-bending belt." },
+        { lvl: "2nd", dnd: "Scorching Ray", sw: "Force Rend / Flamethrower", classes: ["S", "W"], desc: "3 rays, 2d6 Fire each. Telekinetically tear at targets or sweep a Mandalorian flamethrower." },
+        { lvl: "2nd", dnd: "Shatter", sw: "Force Crush / Thermal Imploder", classes: ["B", "S", "W"], desc: "3d8 Thunder. 10ft radius. Violently crush a localized area, crippling droids/cover." },
+        { lvl: "2nd", dnd: "Misty Step", sw: "Force Dash", classes: ["S", "W"], desc: "Bonus action teleport 30ft. Move faster than the eye can track through Force augmentation." },
+        { lvl: "2nd", dnd: "Suggestion", sw: "Advanced Mind Trick", classes: ["B", "S", "W"], desc: "Implant a course of action. 'You will open these blast doors and walk away.'" },
+        { lvl: "2nd", dnd: "Spiritual Weapon", sw: "Telekinetic Lightsaber", classes: ["C"], desc: "Bonus action. 1d8+Mod Force. A secondary lightsaber swinging via telekinesis." },
+        { lvl: "2nd", dnd: "Web", sw: "Cryo-Net / Carbonite Spray", classes: ["S", "W", "A"], desc: "20ft cube of difficult/restraining terrain. Deploy a high-tech snare or freeze the floor." },
+        
+        { lvl: "3rd", dnd: "Fireball", sw: "Force Storm / Heavy Detonator", classes: ["S", "W"], desc: "8d6 Fire. 20ft radius. Massive telekinetic devastation, or a military-grade explosive." },
+        { lvl: "3rd", dnd: "Fly", sw: "Force Levitation / Jetpack", classes: ["S", "W", "A"], desc: "60ft fly speed. Defy gravity through pure Force, or ignite your Z-6 Jetpack." },
+        { lvl: "3rd", dnd: "Haste", sw: "Battle Meditation / Speed", classes: ["S", "W", "A"], desc: "Doubles speed, +2 AC, extra action. Tap deeply into the combat flow, anticipating every move." },
+        { lvl: "3rd", dnd: "Counterspell", sw: "Force Absorb / Deflection", classes: ["S", "W"], desc: "Reaction. Interrupt cast. Catching raw Force energy, or telekinetically crushing a detonator." },
+        { lvl: "3rd", dnd: "Lightning Bolt", sw: "Sith Lightning", classes: ["S", "W"], desc: "8d6 Lightning. 100ft line. Unleash the pure, hateful energy of the dark side from your fingertips." },
+        { lvl: "3rd", dnd: "Dispel Magic", sw: "Force Sever / Slice Override", classes: ["B", "C", "D", "P", "S", "W"], desc: "End ongoing effects. Cut an enemy off from the Force temporarily, or reboot a system." },
+        { lvl: "3rd", dnd: "Mass Healing Word", sw: "Battlefield Vitality", classes: ["C"], desc: "1d4+Mod healing to up to 6 creatures. A massive wave of revitalizing Light Side energy." },
+        { lvl: "3rd", dnd: "Spirit Guardians", sw: "Saber Barrier / Droid Swarm", classes: ["C"], desc: "15ft aura. 3d8 damage/slow. Orbiting telekinetic debris/sabers, or a swarm of buzz droids." }
+    ];
+
+    // --- RENDER FUNCTIONS ---
+    function renderClasses() {
+        const container = document.getElementById('classes-container');
+        let html = '';
+        classData.forEach(c => {
+            html += `
+                <div class="data-card p-4">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-bold text-cyan-400">${c.sw}</h3>
+                        <span class="datapad-font text-xs text-slate-500 uppercase tracking-widest border border-slate-700 px-2 py-0.5 bg-slate-900 rounded">5.5e: ${c.dnd}</span>
+                    </div>
+                    <p class="text-sm text-slate-300 mb-3">${c.desc}</p>
+                    <div class="bg-slate-900/50 p-2 rounded border border-slate-800">
+                        <span class="text-[10px] uppercase text-cyan-600 font-bold block mb-1">Key Translations</span>
+                        <p class="text-xs text-slate-400 font-mono">${c.features}</p>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function renderArmory() {
+        const container = document.getElementById('armory-container');
+        // Group by category
+        const categories = [...new Set(armoryData.map(item => item.cat))];
+        let html = '';
+        
+        categories.forEach(cat => {
+            html += `<h3 class="text-cyan-500 font-bold uppercase tracking-widest text-sm mb-3 mt-6 pl-1 border-l-2 border-cyan-500">${cat}</h3>`;
+            const items = armoryData.filter(i => i.cat === cat);
+            items.forEach(item => {
+                html += `
+                    <div class="data-card p-3 armory-item" data-search="${item.dnd.toLowerCase()} ${item.sw.toLowerCase()}">
+                        <div class="flex justify-between items-end mb-1">
+                            <span class="font-bold text-white text-base">${item.sw}</span>
+                            <span class="datapad-font text-[10px] text-cyan-600">${item.dnd}</span>
+                        </div>
+                        <div class="text-xs font-bold text-amber-500 mb-2 font-mono">${item.dmg}</div>
+                        <p class="text-sm text-slate-400 leading-snug">${item.desc}</p>
+                    </div>
+                `;
+            });
+        });
+        container.innerHTML = html;
+    }
+
+    let currentSpellFilter = 'All';
+
+    function renderHolocron() {
+        const container = document.getElementById('holocron-container');
+        let html = '';
+        
+        const filteredData = currentSpellFilter === 'All' 
+            ? spellData 
+            : spellData.filter(s => s.lvl === currentSpellFilter);
+
+        filteredData.forEach(spell => {
+            // Render class tags
+            let classTagsHtml = spell.classes.map(c => `<span class="class-tag">${c}</span>`).join(' ');
+
+            html += `
+                <div class="data-card p-3 holocron-item" data-search="${spell.dnd.toLowerCase()} ${spell.sw.toLowerCase()}">
+                    <div class="flex justify-between items-start mb-1">
+                        <div>
+                            <span class="font-bold text-white text-base block">${spell.sw}</span>
+                            <span class="datapad-font text-[10px] text-cyan-600 block">5.5e: ${spell.dnd}</span>
+                        </div>
+                        <div class="level-badge text-xs font-bold px-2 py-1 rounded datapad-font shrink-0">
+                            ${spell.lvl}
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-2 mt-1">
+                        ${classTagsHtml}
+                    </div>
+                    <p class="text-sm text-slate-400 leading-snug border-t border-slate-800 pt-2">${spell.desc}</p>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    // --- INTERACTION LOGIC ---
+    function switchTab(tabId) {
+        // Hide all tabs
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        // Remove active class from all nav buttons
+        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+        
+        // Show selected tab
+        document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        // Add active class to selected nav button
+        document.getElementById(`nav-${tabId}`).classList.add('active');
+        
+        // Scroll to top of main content area smoothly
+        document.getElementById('main-content').scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function filterSpells(level) {
+        currentSpellFilter = level;
+        // Update filter button UI
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('bg-cyan-900/30', 'border-cyan-800', 'text-cyan-300');
+            btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-400');
+        });
+        event.target.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-400');
+        event.target.classList.add('bg-cyan-900/30', 'border-cyan-800', 'text-cyan-300');
+        
+        // Clear search when changing level filters
+        document.getElementById('search-holocron').value = '';
+        renderHolocron();
+    }
+
+    function filterList(type) {
+        const input = document.getElementById(`search-${type}`).value.toLowerCase();
+        const items = document.querySelectorAll(`.${type}-item`);
+        
+        items.forEach(item => {
+            const searchData = item.getAttribute('data-search');
+            if (searchData.includes(input)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Hide category headers in armory if searching
+        if (type === 'armory') {
+            const headers = document.querySelectorAll('#armory-container h3');
+            headers.forEach(h => {
+                h.style.display = input === '' ? 'block' : 'none';
+            });
+        }
+    }
+
+    // Initialize App
+    renderClasses();
+    renderArmory();
+    renderHolocron();
+</script>
+
+</body>
+</html>
