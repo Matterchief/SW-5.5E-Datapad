@@ -3,386 +3,464 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Player Datapad - SW5.5e</title>
+    <title>Player Datapad — SW 5.5e</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Added Rubik Glitch for the Dark Side font */
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Rubik+Glitch&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
 
-        /* Dynamic Theme Variables */
         :root {
-            --bg-base: #020617; 
+            /* Default skin: REBELLION (cyan) */
+            --bg-base: #020617;
             --bg-panel: rgba(15, 23, 42, 0.7);
-            
-            /* Default Theme: Rebellion (Cyan) */
             --hud: #0ea5e9;
             --hud-glow: rgba(14, 165, 233, 0.5);
             --hud-deep: #075985;
             --accent: #f59e0b;
-            
-            --scanline-intensity: 0.2;
-            --flicker-intensity: 0.1;
-            --static-intensity: 0.1;
+            --scanline-opacity: 0.3;
+            --static-opacity: 0.04;
         }
 
-        /* Faction Skins */
+        /* FACTION SKINS — selectable in Settings */
         [data-skin="empire"]   { --hud:#ef4444; --hud-glow:rgba(239,68,68,.5); --hud-deep:#7f1d1d; --accent:#fbbf24; }
-        [data-skin="mando"]    { --hud:#f59e0b; --hud-glow:rgba(245,158,11,.45); --hud-deep:#78350f; --accent:#22d3ee; }
-        [data-skin="sith"]     { --hud:#dc2626; --hud-glow:rgba(220,38,38,.7); --hud-deep:#450a0a; --accent:#f97316; }
+        [data-skin="mando"]    { --hud:#fbbf24; --hud-glow:rgba(251,191,36,.45); --hud-deep:#78350f; --accent:#22d3ee; }
+        [data-skin="sith"]     { --hud:#dc2626; --hud-glow:rgba(220,38,38,.55); --hud-deep:#450a0a; --accent:#f97316; }
         [data-skin="jedi"]     { --hud:#22c55e; --hud-glow:rgba(34,197,94,.45); --hud-deep:#14532d; --accent:#a7f3d0; }
-        [data-skin="rebellion"]{ --hud:#0ea5e9; --hud-glow:rgba(14,165,233,.45); --hud-deep:#075985; --accent:#fde047; }
-
-        .text-hud { color: var(--hud); }
-        .bg-hud { background-color: var(--hud); }
-        .border-hud { border-color: var(--hud); }
-        .shadow-hud { box-shadow: 0 0 10px var(--hud-glow); }
-        .glow-text-hud { text-shadow: 0 0 8px var(--hud-glow); }
-
-        html { font-size: 16px; transition: font-size 0.3s ease; }
+        [data-skin="republic"] { --hud:#a855f7; --hud-glow:rgba(168,85,247,.45); --hud-deep:#581c87; --accent:#fde047; }
 
         body {
-            background-color: var(--bg-base); color: #e2e8f0; font-family: 'Rajdhani', sans-serif;
-            overflow-x: hidden; -webkit-tap-highlight-color: transparent;
+            background-color: var(--bg-base);
+            color: #e2e8f0;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* CRT scanlines */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed; inset: 0;
+            background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%),
+                        linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06));
+            z-index: 2;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+            opacity: var(--scanline-opacity);
+            transition: opacity .3s;
+        }
+
+        /* CRT static noise (pure CSS via SVG turbulence) */
+        body::after {
+            content: "";
+            position: fixed; inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            opacity: var(--static-opacity);
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
+            mix-blend-mode: overlay;
+            transition: opacity .3s;
+        }
+
+        /* Edge vignette adds CRT curvature feel */
+        .vignette {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 120px 20px rgba(0,0,0,0.7);
+            z-index: 4;
         }
 
         .datapad-font { font-family: 'Share Tech Mono', monospace; }
-        .display-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.08em; transition: font-family 0.3s; }
+        .display-font { font-family: 'Orbitron', sans-serif; letter-spacing: 0.08em; }
 
-        /* --- DARK SIDE CORRUPTION --- */
-        body.dark-side-active .display-font {
-            font-family: 'Rubik Glitch', cursive;
-            letter-spacing: 0.1em;
-            color: #dc2626 !important;
-            text-shadow: 0 0 12px rgba(220, 38, 38, 0.8), 0 0 24px rgba(220, 38, 38, 0.4) !important;
-        }
-        body.dark-side-active .header,
-        body.dark-side-active .bottom-nav {
-            background: linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(69, 10, 10, 0.95) 100%);
+        .app-container {
+            display: flex; flex-direction: column;
+            height: 100vh; height: 100dvh;
+            position: relative; z-index: 10;
         }
 
-        /* --- HARDWARE AESTHETICS --- */
-        .vignette {
-            position: fixed; inset: 0; pointer-events: none;
-            box-shadow: inset 0 0 120px 20px rgba(0,0,0,0.8); z-index: 4;
-        }
         .header {
-            border-bottom: 2px solid var(--hud); box-shadow: 0 0 14px var(--hud-glow);
+            border-bottom: 2px solid var(--hud);
+            box-shadow: 0 0 14px var(--hud-glow);
             background: linear-gradient(180deg, rgba(2,6,23,1) 0%, rgba(15,23,42,0.95) 100%);
-            position: relative; transition: background 0.5s;
+            position: relative;
         }
+        /* Header corner brackets — that hardware-frame feel */
         .header::before, .header::after {
-            content:""; position:absolute; bottom:-2px; width:16px; height:10px; border-bottom: 2px solid var(--hud);
+            content:""; position:absolute; bottom:-2px; width:16px; height:10px;
+            border-bottom: 2px solid var(--hud);
         }
         .header::before { left:0; border-left: 2px solid var(--hud); }
         .header::after  { right:0; border-right: 2px solid var(--hud); }
 
-        /* --- VISUAL EFFECTS --- */
-        .scanlines {
-            content: " "; display: block; position: fixed; inset: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 2; background-size: 100% 4px, 6px 100%; pointer-events: none; opacity: var(--scanline-intensity);
-        }
+        .scroll-area { flex:1; overflow-y:auto; padding-bottom:100px; scrollbar-width:none; }
+        .scroll-area::-webkit-scrollbar { display:none; }
 
-        .scanner-sweep {
-            position: fixed; top: 0; left: 0; right: 0; height: 3px;
-            background: var(--hud); box-shadow: 0 0 15px var(--hud), 0 0 30px var(--hud-glow);
-            z-index: 3; animation: sweep 8s linear infinite; pointer-events: none; opacity: 0.8;
-        }
-        @keyframes sweep { 0% { transform: translateY(-5vh); } 100% { transform: translateY(105vh); } }
-
-        body.vfx-flicker { animation: crt-flicker 0.15s infinite; }
-        @keyframes crt-flicker {
-            0% { opacity: calc(1 - (0.15 * var(--flicker-intensity))); }
-            50% { opacity: 1; }
-            100% { opacity: calc(1 - (0.25 * var(--flicker-intensity))); }
-        }
-
-        .static-burst {
-            position: fixed; inset: 0; z-index: 4; pointer-events: none; mix-blend-mode: color-dodge;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
-            opacity: 0;
-        }
-        body.vfx-static .static-burst { animation: static-flash 8s infinite; }
-        @keyframes static-flash {
-            0%, 93% { opacity: 0; } 94% { opacity: calc(0.5 * var(--static-intensity)); }
-            95% { opacity: calc(0.2 * var(--static-intensity)); } 96% { opacity: calc(0.8 * var(--static-intensity)); }
-            97%, 100% { opacity: 0; }
-        }
-
-        /* --- LAYOUT --- */
-        .app-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; position: relative; z-index: 10; }
-        .scroll-area { flex: 1; overflow-y: auto; padding-bottom: 88px; scrollbar-width: none; }
-        .scroll-area::-webkit-scrollbar { display: none; }
-
+        /* Star Wars Slanted Bottom Nav */
         .bottom-nav {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(2,6,23,0.95); backdrop-filter: blur(10px);
+            background: var(--bg-base);
             border-top: 1px solid var(--hud-deep);
-            display: flex; justify-content: space-around;
-            padding-bottom: env(safe-area-inset-bottom); z-index: 50; transition: background 0.5s;
+            display: flex; justify-content: center; gap: 4px;
+            padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+            z-index: 100;
         }
         .nav-btn {
-            flex:1; padding: 12px 0; display:flex; flex-direction:column; align-items:center;
-            color:#64748b; transition: color .2s, text-shadow .2s; position: relative;
+            flex: 1; padding: 10px 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(15,23,42,0.8);
+            color: #475569;
+            transition: all 0.2s ease;
+            clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
         }
-        .nav-btn.active { color: var(--hud); text-shadow: 0 0 8px var(--hud-glow); }
-        .nav-btn.active::before {
-            content:""; position:absolute; top:0; left:25%; right:25%; height:2px;
-            background: var(--hud); box-shadow: 0 0 8px var(--hud-glow);
+        /* Adjust ends to snap to screen edges */
+        .nav-btn:first-child { clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+        .nav-btn:last-child { clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%); }
+        
+        .nav-btn.active { 
+            background: color-mix(in srgb, var(--hud) 25%, transparent);
+            color: var(--hud); 
+            text-shadow: 0 0 8px var(--hud-glow); 
         }
         .nav-btn svg { width:22px; height:22px; margin-bottom:3px; }
 
-        /* --- CARDS & GRIDS --- */
-        .grid-container { display: flex; flex-direction: column; gap: 0.75rem; }
-        
+        /* Cards */
         .data-card {
-            background: var(--bg-panel); border: 1px solid color-mix(in srgb, var(--hud) 25%, transparent); border-left: 3px solid var(--hud);
-            border-radius: 4px; position: relative; overflow: hidden; transition: all 0.15s; cursor: pointer;
+            background: var(--bg-panel);
+            border: 1px solid color-mix(in srgb, var(--hud) 25%, transparent);
+            border-left: 3px solid var(--hud);
+            border-radius: 4px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color .2s, transform .15s;
         }
-        .data-card:active { transform: scale(0.98); }
+        .data-card:active { transform: scale(0.99); }
         .data-card::after {
-            content: ""; position: absolute; top: 0; right: 0; width: 30px; height: 30px;
+            content:""; position:absolute; top:0; right:0;
+            width:30px; height:30px;
             background: linear-gradient(225deg, color-mix(in srgb, var(--hud) 15%, transparent) 50%, transparent 50%);
         }
 
-        /* --- COMPACT MODE FIXES --- */
-        body.view-compact .grid-container { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
-        @media (min-width: 640px) { body.view-compact .grid-container { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-        
-        body.view-compact .data-card { padding: 0.75rem !important; display: flex; flex-direction: column; justify-content: flex-start; }
-        body.view-compact .card-desc { display: none !important; }
-        body.view-compact .rename-guide { display: none !important; }
-        body.view-compact .card-header-block { margin-bottom: 0 !important; flex-direction: column; align-items: flex-start; gap: 0.5rem; padding-right: 0 !important; }
-        body.view-compact .card-compact-equiv { display: block; }
-        body.view-compact .level-badge { align-self: flex-start; margin-top: 4px; }
-        body.view-compact .fav-btn { bottom: 0.25rem; right: 0.25rem; transform: scale(0.85); }
-
-        .card-compact-equiv { display: none; }
-
-        /* --- UI ELEMENTS --- */
-        .chip {
-            background: rgba(15,23,42,0.8); border: 1px solid #1e293b; color: #94a3b8;
-            padding: 4px 12px; border-radius: 4px; font-size: 0.75rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.1em; white-space: nowrap;
-            transition: all .15s; font-family: 'Share Tech Mono', monospace; cursor: pointer;
+        .level-badge {
+            background: color-mix(in srgb, var(--hud) 12%, transparent);
+            border: 1px solid var(--hud);
+            color: var(--hud);
         }
-        .chip.active { background: color-mix(in srgb, var(--hud) 18%, transparent); border-color: var(--hud); color: var(--hud); text-shadow: 0 0 6px var(--hud-glow); }
-        .chip-fav.active { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: var(--accent); color: var(--accent); text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
-        .chip-mine.active { background: color-mix(in srgb, var(--accent) 20%, transparent); border-color: var(--accent); color: var(--accent); text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent); }
+        .class-tag {
+            font-size: 0.65rem; padding: 2px 7px;
+            background: color-mix(in srgb, var(--accent) 12%, transparent);
+            border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+            color: var(--accent);
+            border-radius: 12px;
+            white-space: nowrap;
+            font-weight: 600;
+            font-family: 'Share Tech Mono', monospace;
+        }
 
-        .class-tag { font-size: 0.65rem; padding: 2px 6px; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); border-radius: 12px; white-space: nowrap; font-family: 'Share Tech Mono', monospace; }
-        .level-badge { background: color-mix(in srgb, var(--hud) 10%, transparent); border: 1px solid var(--hud); color: var(--hud); }
-        
-        .fav-btn { position: absolute; bottom: 0.5rem; right: 0.5rem; padding: 0.25rem; color: #475569; transition: all 0.2s; z-index: 20; border-radius: 50%; }
-        .fav-btn.active { color: var(--accent); filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.8)); }
-        
-        mark.hit { background: color-mix(in srgb, var(--hud) 40%, transparent); color: #fff; padding: 0 2px; border-radius: 2px; }
+        /* Filter chips */
+        .chip {
+            background: rgba(15,23,42,0.8);
+            border: 1px solid #1e293b;
+            color: #94a3b8;
+            padding: 4px 10px; border-radius: 4px;
+            font-size: 0.7rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.1em;
+            white-space: nowrap;
+            transition: all .15s;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .chip.active {
+            background: color-mix(in srgb, var(--hud) 18%, transparent);
+            border-color: var(--hud);
+            color: var(--hud);
+            text-shadow: 0 0 6px var(--hud-glow);
+        }
+        .chip-fav.active {
+            background: color-mix(in srgb, var(--accent) 18%, transparent);
+            border-color: var(--accent);
+            color: var(--accent);
+            text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent);
+        }
 
-        .scale-btn { flex: 1; text-align: center; padding: 8px 0; border: 1px solid #475569; color: #94a3b8; border-radius: 4px; font-weight: bold; transition: all 0.2s; cursor: pointer;}
-        .scale-btn.active { background: color-mix(in srgb, var(--hud) 15%, transparent); border-color: var(--hud); color: var(--hud); }
+        /* Star button */
+        .star-btn {
+            background: transparent; border: none; padding: 4px;
+            cursor: pointer; color: #475569; transition: color .15s, transform .15s;
+        }
+        .star-btn.starred { color: var(--accent); text-shadow: 0 0 8px color-mix(in srgb, var(--accent) 60%, transparent); }
+        .star-btn:active { transform: scale(1.25); }
 
-        /* Sliders */
-        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--hud); cursor: pointer; margin-top: -7px; box-shadow: 0 0 8px var(--hud-glow); }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #334155; border-radius: 2px; }
-        
-        #setting-alignment::-webkit-slider-thumb { background: #fff; box-shadow: 0 0 10px rgba(255,255,255,0.8); border: 2px solid #000; }
+        /* Search highlight */
+        mark.hit {
+            background: color-mix(in srgb, var(--hud) 30%, transparent);
+            color: #fff;
+            padding: 0 2px; border-radius: 2px;
+        }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .tab-content { animation: fadeIn 0.3s ease-out; }
+        /* Settings inputs */
+        .field-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--hud);
+            opacity: 0.85;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .field-input, .field-select {
+            width: 100%;
+            background: rgba(2,6,23,0.6);
+            border: 1px solid color-mix(in srgb, var(--hud) 35%, transparent);
+            color: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 3px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .field-input:focus, .field-select:focus {
+            border-color: var(--hud);
+            box-shadow: 0 0 0 3px var(--hud-glow);
+        }
+        .field-select {
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, var(--hud) 50%),
+                              linear-gradient(135deg, var(--hud) 50%, transparent 50%);
+            background-position: calc(100% - 16px) 50%, calc(100% - 12px) 50%;
+            background-size: 4px 4px, 4px 4px;
+            background-repeat: no-repeat;
+            padding-right: 32px;
+        }
+        .slider {
+            -webkit-appearance: none; appearance: none;
+            width: 100%; height: 4px;
+            background: color-mix(in srgb, var(--hud) 25%, #1e293b);
+            border-radius: 2px;
+            outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px;
+            background: var(--hud);
+            border: 2px solid var(--bg-base);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--hud-glow);
+        }
+        .slider::-moz-range-thumb {
+            width: 18px; height: 18px;
+            background: var(--hud);
+            border: 2px solid var(--bg-base);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--hud-glow);
+        }
+
+        /* Skin swatches */
+        .skin-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+        .skin-swatch {
+            aspect-ratio: 1;
+            border: 2px solid #1e293b;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: transform .15s, border-color .2s;
+            overflow: hidden;
+        }
+        .skin-swatch:active { transform: scale(0.92); }
+        .skin-swatch.active { border-color: #fff; box-shadow: 0 0 0 2px var(--bg-base), 0 0 0 4px currentColor; }
+        .skin-swatch::after {
+            content: ""; position: absolute; inset: 0;
+            background: linear-gradient(135deg, currentColor 0%, currentColor 40%, transparent 60%);
+            opacity: 0.85;
+        }
+        .skin-label {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.55rem;
+            text-transform: uppercase;
+            text-align: center;
+            background: rgba(2,6,23,0.85);
+            color: #e2e8f0;
+            padding: 2px 0;
+            z-index: 2;
+            letter-spacing: 0.1em;
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity:0; transform: translateY(-6px); } to { opacity:1; transform: translateY(0); } }
+        .tab-content { animation: fadeIn 0.25s ease-out; }
+        .data-card { animation: slideIn 0.2s ease-out backwards; }
+
         .blink { animation: blinker 2s linear infinite; }
         @keyframes blinker { 50% { opacity: 0.25; } }
-        
-        .modal-content-area { max-height: 70vh; overflow-y: auto; scrollbar-width: none; }
 
-        /* --- BOOT SEQUENCE --- */
-        #boot-screen {
-            position: fixed; inset: 0; background-color: #020617; z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; padding: 2rem;
-            font-family: 'Share Tech Mono', monospace; color: var(--hud); text-shadow: 0 0 8px var(--hud-glow);
-            transition: opacity 0.4s ease-out;
+        /* Boot text typing */
+        @keyframes typing {
+            0% { width: 0; }
+            100% { width: 100%; }
         }
-        .boot-line { margin-bottom: 0.5rem; opacity: 0; font-size: 0.9rem; }
-        @media (min-width: 768px) { .boot-line { font-size: 1.2rem; } }
-        .cursor { display: inline-block; width: 10px; height: 1.1em; background-color: var(--hud); animation: blinker 1s infinite; vertical-align: bottom; margin-left: 4px; }
 
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #475569;
+        }
+        .empty-state svg { margin: 0 auto 16px; opacity: 0.4; }
+
+        /* Section header */
+        .section-header {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            color: var(--hud);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-size: 0.75rem;
+            border-left: 3px solid var(--hud);
+            padding-left: 10px;
+            margin: 24px 0 12px;
+        }
+        .section-header:first-child { margin-top: 8px; }
+
+        /* The "MINE" filter pill gets a special look */
+        .chip-mine.active {
+            background: color-mix(in srgb, var(--accent) 20%, transparent);
+            border-color: var(--accent);
+            color: var(--accent);
+            text-shadow: 0 0 6px color-mix(in srgb, var(--accent) 60%, transparent);
+        }
     </style>
 </head>
-<body class="vfx-scanlines vfx-scanner vfx-flicker vfx-static view-standard" data-skin="rebellion">
-
-<!-- Boot Sequence Overlay -->
-<div id="boot-screen" onclick="skipBoot()">
-    <div id="boot-content"></div>
-    <div class="mt-4 text-[10px] text-slate-500 opacity-50 uppercase tracking-widest text-center mt-auto absolute bottom-8 left-0 right-0">Tap anywhere to override sequence</div>
-</div>
-
+<body>
 <div class="vignette"></div>
-<div class="scanlines"></div>
-<div class="scanner-sweep"></div>
-<div class="static-burst"></div>
-
 <div class="app-container">
-    
-    <!-- Top Header -->
-    <header class="header shadow-hud p-3 flex justify-between items-center shrink-0">
-        <div class="flex items-center gap-3 min-w-0">
-            <div class="w-2 h-2 rounded-full bg-hud blink shadow-hud shrink-0"></div>
+
+    <!-- HEADER -->
+    <header class="header p-3 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-2 h-2 rounded-full blink shrink-0" style="background: var(--hud); box-shadow: 0 0 8px var(--hud-glow);"></div>
             <div class="min-w-0">
-                <h1 class="text-xl font-black text-hud uppercase glow-text-hud leading-none display-font truncate">Alliance Net</h1>
-                <p id="header-callsign" class="text-[9px] text-slate-400 uppercase datapad-font tracking-wider mt-1 truncate" style="color: var(--hud-deep);">Op-Guide // Default User</p>
+                <h1 id="hdr-title" class="display-font text-lg font-black uppercase truncate" style="color: var(--hud);">Alliance Net</h1>
+                <p id="hdr-sub" class="text-[9px] uppercase datapad-font tracking-widest truncate" style="color: var(--hud-deep);">Op-Guide // Bright Jewel Sector</p>
             </div>
         </div>
-        <div class="text-right flex items-center gap-2 shrink-0 ml-2">
-            <!-- View Toggle Button -->
-            <button onclick="toggleViewMode()" id="btn-view-toggle" class="text-hud hover:text-white p-1.5 bg-slate-900 rounded border border-hud-soft shadow-lg transition-colors" style="border-color: var(--hud-deep);">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-            </button>
-            <button onclick="switchTab('settings')" class="text-hud hover:text-white p-1.5 bg-slate-900 rounded border border-hud-soft shadow-lg transition-colors" style="border-color: var(--hud-deep);">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
+        <div class="text-right shrink-0 ml-2">
+            <div id="hdr-status" class="datapad-font text-[10px] text-slate-500 uppercase">v5.5.0_SW</div>
+            <div id="hdr-rank" class="datapad-font text-[10px] hidden" style="color: var(--accent);"></div>
         </div>
     </header>
 
-    <!-- Scrollable Content Area -->
+    <!-- MAIN -->
     <main class="scroll-area p-4" id="main-content">
-        
+
         <!-- TAB: PROFILES -->
-        <div id="tab-profiles" class="tab-content">
+        <section id="tab-profiles" class="tab-content">
             <div class="mb-4">
-                <h2 class="display-font text-2xl font-black text-white tracking-wide uppercase border-b pb-2" style="border-color: var(--hud-deep);">Operative Profiles</h2>
-                <p class="text-slate-400 text-sm mt-2 leading-relaxed">Map your 5.5e class base to a Star Wars archetype. Tap for stats.</p>
+                <h2 class="display-font text-2xl font-black text-white uppercase tracking-wide pb-2 border-b" style="border-color: var(--hud-deep);">Operative Profiles</h2>
+                <p class="text-slate-400 text-sm mt-2 leading-relaxed">Map your 5.5e class to a Star Wars archetype. Mechanics unchanged — only the flavor.</p>
             </div>
-            <div id="classes-container" class="grid-container"></div>
-        </div>
+            <div id="classes-container" class="space-y-3"></div>
+        </section>
 
         <!-- TAB: ARMORY -->
-        <div id="tab-armory" class="tab-content hidden">
-            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-3 border-b" style="border-color: var(--hud-deep);">
-                <h2 class="display-font text-2xl font-black text-white tracking-wide uppercase mb-3">Armory</h2>
+        <section id="tab-armory" class="tab-content hidden">
+            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-3 border-b border-slate-800">
+                <h2 class="display-font text-2xl font-black text-white uppercase mb-3">Armory & Requisitions</h2>
                 <div class="flex gap-2 mb-3 overflow-x-auto pb-1 scroll-area" id="armory-filters"></div>
                 <div class="relative">
                     <svg class="w-5 h-5 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--hud-deep);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" id="search-armory" oninput="renderArmory()" class="w-full bg-slate-900 border rounded-md pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-hud text-sm datapad-font" style="border-color: var(--hud-deep);" placeholder="Search weapons, armor, gear...">
+                    <input type="text" id="search-armory" oninput="renderArmory()" class="w-full bg-slate-900 rounded-md pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:outline-none text-sm datapad-font border" style="border-color: var(--hud-deep);" placeholder="Search weapons, gear, descriptions...">
                 </div>
             </div>
-            <div id="armory-container" class="grid-container"></div>
-        </div>
+            <div id="armory-container"></div>
+        </section>
 
         <!-- TAB: HOLOCRON -->
-        <div id="tab-holocron" class="tab-content hidden">
-            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-3 border-b" style="border-color: var(--hud-deep);">
-                <h2 class="display-font text-2xl font-black text-white tracking-wide uppercase mb-3">Jedi Holocron</h2>
-                <div class="flex gap-2 mb-3 overflow-x-auto pb-1 scroll-area" id="holocron-filters"></div>
+        <section id="tab-holocron" class="tab-content hidden">
+            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-3 border-b border-slate-800">
+                <h2 class="display-font text-2xl font-black text-white uppercase mb-3">Jedi Holocron</h2>
+                <div class="flex gap-2 mb-2 overflow-x-auto pb-1 scroll-area" id="holocron-filters"></div>
                 <div class="relative">
                     <svg class="w-5 h-5 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color: var(--hud-deep);"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <input type="text" id="search-holocron" oninput="renderHolocron()" class="w-full bg-slate-900 border rounded-md pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-hud text-sm datapad-font" style="border-color: var(--hud-deep);" placeholder="Search force powers or 5e spells...">
+                    <input type="text" id="search-holocron" oninput="renderHolocron()" class="w-full bg-slate-900 rounded-md pl-10 pr-4 py-2 text-white placeholder-slate-500 focus:outline-none text-sm datapad-font border" style="border-color: var(--hud-deep);" placeholder="Search powers, 5e names, descriptions...">
                 </div>
+                <div id="holocron-status" class="text-[10px] datapad-font uppercase tracking-widest mt-2 text-slate-500"></div>
             </div>
-            <div id="holocron-container" class="grid-container"></div>
-        </div>
-
-        <!-- TAB: LOADOUT (Favorites) -->
-        <div id="tab-loadout" class="tab-content hidden">
-            <div class="mb-4 sticky top-0 z-20 bg-[#020617] pt-2 pb-3 border-b" style="border-color: var(--hud-deep);">
-                <h2 class="display-font text-2xl font-black text-white tracking-wide uppercase mb-3">Loadout</h2>
-                <p class="text-xs text-slate-400">Your favorited gear and powers. Tap the star icon on any card to add it here.</p>
-            </div>
-            <div id="loadout-empty" class="text-center p-8 border border-slate-800 border-dashed rounded-lg mt-8 text-slate-500">
-                <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
-                <p class="datapad-font uppercase tracking-widest text-xs">Loadout Empty</p>
-            </div>
-            <div id="loadout-container" class="grid-container"></div>
-        </div>
+            <div id="holocron-container"></div>
+        </section>
 
         <!-- TAB: SETTINGS -->
-        <div id="tab-settings" class="tab-content hidden">
+        <section id="tab-settings" class="tab-content hidden">
             <div class="mb-4">
-                <h2 class="display-font text-2xl font-black text-white uppercase tracking-wide pb-2 border-b" style="border-color: var(--hud-deep);">Datapad Config</h2>
-                <p class="text-slate-400 text-sm mt-2 leading-relaxed">Configure operative dossier and visuals.</p>
+                <h2 class="display-font text-2xl font-black text-white uppercase tracking-wide pb-2 border-b" style="border-color: var(--hud-deep);">Datapad Calibration</h2>
+                <p class="text-slate-400 text-sm mt-2 leading-relaxed">Configure operative dossier and unit display.</p>
             </div>
-            
-            <div class="space-y-6">
-                <!-- Operative Identity -->
-                <div class="bg-slate-900/50 p-4 rounded border border-slate-800">
-                    <h3 class="text-white font-bold text-lg mb-3 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-hud" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        Operative Identity
-                    </h3>
-                    <div class="space-y-3">
-                        <input type="text" id="setting-callsign" oninput="updateIdentity()" class="w-full bg-slate-900 border border-slate-700 rounded-md px-4 py-2 text-hud focus:outline-none focus:border-hud font-bold uppercase tracking-wider datapad-font" placeholder="Enter Callsign...">
-                        <select id="setting-class" onchange="updateIdentity()" class="w-full bg-slate-900 border border-slate-700 text-hud rounded-md px-3 py-2 focus:outline-none focus:border-hud font-bold uppercase tracking-wider datapad-font appearance-none">
-                        </select>
-                        <div class="bg-slate-900 border border-slate-700 p-3 rounded-md">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-slate-300 font-bold uppercase datapad-font text-sm">Character Level</span>
-                                <span id="level-display" class="text-hud font-bold text-lg datapad-font">1</span>
-                            </div>
-                            <input type="range" id="setting-level" min="1" max="20" value="1" oninput="updateIdentity()" class="w-full">
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Force Alignment Master Slider -->
-                <div class="bg-slate-900/50 p-4 rounded border border-slate-800">
-                    <h3 class="text-white font-bold text-lg mb-2 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-hud" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                        Force Alignment
-                    </h3>
-                    <p class="text-sm text-slate-400 mb-4">Slide to embrace the Dark Side. Modifies Datapad theme, visual effects, and interface corruption.</p>
-                    
-                    <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1">
-                        <span class="text-blue-400">Light</span>
-                        <span class="text-amber-500">Balance</span>
-                        <span class="text-red-600">Dark</span>
-                    </div>
-                    
-                    <input type="range" id="setting-alignment" min="1" max="5" value="1" step="1" oninput="updateAlignment(this.value)" class="w-full h-2 rounded-full appearance-none outline-none mt-2 mb-2" style="background: linear-gradient(to right, #0ea5e9, #22c55e, #f59e0b, #ea580c, #dc2626);">
-                    <div id="alignment-label" class="text-center text-xs font-bold text-hud mt-3 uppercase tracking-widest datapad-font">Rebellion / Light Side</div>
+            <!-- Identity -->
+            <div class="section-header">// Operative Dossier</div>
+            <div class="data-card p-4 space-y-4">
+                <div>
+                    <label class="field-label">Operative Designation</label>
+                    <input type="text" id="set-name" class="field-input datapad-font" placeholder="e.g., Kaelen Vex" maxlength="32">
                 </div>
-
-                <!-- UI Scaling -->
-                <div class="bg-slate-900/50 p-4 rounded border border-slate-800">
-                    <h3 class="text-white font-bold text-lg mb-3">Display Scale</h3>
-                    <div class="flex gap-2">
-                        <button onclick="setUIScale('sm')" id="btn-scale-sm" class="scale-btn">Small</button>
-                        <button onclick="setUIScale('md')" id="btn-scale-md" class="scale-btn active">Standard</button>
-                        <button onclick="setUIScale('lg')" id="btn-scale-lg" class="scale-btn">Large</button>
-                    </div>
+                <div>
+                    <label class="field-label">Class Profile (5.5e)</label>
+                    <select id="set-class" class="field-select"></select>
                 </div>
-
-                <!-- Advanced VFX Overrides -->
-                <div class="bg-slate-900/50 p-4 rounded border border-slate-800">
-                    <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-hud" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                        Advanced Visual Overrides
-                    </h3>
-                    <div class="space-y-5">
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-slate-300 font-bold text-sm">CRT Scanlines</span>
-                            </div>
-                            <input type="range" id="vfx-scanlines" min="0" max="100" value="30" oninput="updateVFX('scanline-intensity', this.value)">
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-slate-300 font-bold text-sm">Screen Flicker</span>
-                            </div>
-                            <input type="range" id="vfx-flicker" min="0" max="100" value="20" oninput="updateVFX('flicker-intensity', this.value)">
-                        </div>
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-slate-300 font-bold text-sm">Atmospheric Static</span>
-                            </div>
-                            <input type="range" id="vfx-static" min="0" max="100" value="50" oninput="updateVFX('static-intensity', this.value)">
-                        </div>
-                    </div>
+                <div>
+                    <label class="field-label">Operative Level</label>
+                    <input type="number" id="set-level" class="field-input datapad-font" min="1" max="20" value="1">
+                </div>
+                <div id="rank-display" class="hidden mt-2 p-3 rounded border border-dashed" style="border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 5%, transparent);">
+                    <div class="text-[10px] uppercase tracking-widest datapad-font" style="color: var(--accent);">Current Rank</div>
+                    <div id="rank-title" class="display-font text-lg font-black mt-1" style="color: var(--accent);"></div>
                 </div>
             </div>
-        </div>
+
+            <!-- Faction skin -->
+            <div class="section-header">// HUD Faction</div>
+            <div class="data-card p-4">
+                <label class="field-label">Display Theme</label>
+                <div class="skin-grid mt-1" id="skin-grid"></div>
+            </div>
+
+            <!-- CRT calibration -->
+            <div class="section-header">// CRT Calibration</div>
+            <div class="data-card p-4 space-y-5">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="field-label" style="margin: 0;">Scanlines</label>
+                        <span id="set-scan-val" class="datapad-font text-xs" style="color: var(--hud);">30%</span>
+                    </div>
+                    <input type="range" id="set-scan" class="slider" min="0" max="100" value="30">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="field-label" style="margin: 0;">Static / Noise</label>
+                        <span id="set-static-val" class="datapad-font text-xs" style="color: var(--hud);">4%</span>
+                    </div>
+                    <input type="range" id="set-static" class="slider" min="0" max="20" value="4">
+                </div>
+            </div>
+
+            <!-- Reset -->
+            <div class="section-header">// System</div>
+            <div class="data-card p-4">
+                <button onclick="resetAll()" class="w-full py-2 datapad-font uppercase tracking-widest text-sm border rounded transition-colors" style="border-color: #7f1d1d; color: #fca5a5; background: rgba(127,29,29,0.15);">
+                    Purge All Settings & Favorites
+                </button>
+                <p class="text-[10px] datapad-font uppercase tracking-widest text-slate-600 text-center mt-3">SW 5.5e Datapad // build 2.0</p>
+            </div>
+        </section>
 
     </main>
 
-    <!-- Bottom Navigation -->
+    <!-- BOTTOM NAV -->
     <nav class="bottom-nav">
         <button onclick="switchTab('profiles')" id="nav-profiles" class="nav-btn active">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
@@ -393,786 +471,687 @@
             <span class="text-[10px] uppercase font-bold tracking-widest">Armory</span>
         </button>
         <button onclick="switchTab('holocron')" id="nav-holocron" class="nav-btn">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2l2.39 7.36H22l-6.18 4.49L18.21 21 12 16.51 5.79 21l2.39-7.15L2 9.36h7.61z"></path></svg>
             <span class="text-[10px] uppercase font-bold tracking-widest">Holocron</span>
         </button>
-        <button onclick="switchTab('loadout')" id="nav-loadout" class="nav-btn">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
-            <span class="text-[10px] uppercase font-bold tracking-widest">Loadout</span>
+        <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317a1 1 0 011.35 0l1.42 1.42a1 1 0 00.998.244l1.94-.582a1 1 0 011.27.84l.21 2.018a1 1 0 00.62.836l1.86.776a1 1 0 01.6 1.21l-.55 1.95a1 1 0 00.244.998l1.42 1.42a1 1 0 010 1.35l-1.42 1.42a1 1 0 00-.244.998l.55 1.95a1 1 0 01-.6 1.21l-1.86.776a1 1 0 00-.62.836l-.21-2.018a1 1 0 01-1.27-.84l-1.94-.582a1 1 0 00-.998.244l-1.42 1.42a1 1 0 01-1.35 0l-1.42-1.42a1 1 0 00-.998-.244l-1.94.582a1 1 0 01-1.27-.84l-.21-2.018a1 1 0 00-.62-.836l-1.86-.776a1 1 0 01-.6-1.21l.55-1.95a1 1 0 00-.244-.998L2.317 13.675a1 1 0 010-1.35l1.42-1.42a1 1 0 00.244-.998l-.55-1.95a1 1 0 01.6-1.21l1.86-.776a1 1 0 00.62-.836l.21-2.018a1 1 0 011.27-.84l1.94.582a1 1 0 00.998-.244z"></path><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+            <span class="text-[10px] uppercase font-bold tracking-widest">Config</span>
         </button>
     </nav>
 </div>
 
-<!-- Details Modal Overlay -->
-<div id="details-modal" class="fixed inset-0 bg-[#020617]/95 backdrop-blur-md z-[100] hidden flex-col items-center justify-center p-4 opacity-0 transition-opacity duration-200">
-    <div class="w-full max-w-lg bg-slate-900 border border-hud shadow-hud rounded-lg overflow-hidden flex flex-col max-h-[85vh]">
-        <div class="bg-slate-800 border-b p-3 flex justify-between items-start" style="border-color: var(--hud-deep);">
-            <div>
-                <h2 id="modal-title" class="text-xl font-bold text-white leading-tight display-font">Title</h2>
-                <p id="modal-subtitle" class="text-hud datapad-font text-xs uppercase tracking-widest">Subtitle</p>
+<script>
+/* =========================================================================
+   STAR WARS 5.5e PLAYER DATAPAD — v2.0
+   ========================================================================= */
+
+/* ---------- DATABASE: CLASSES ---------- */
+const classData = [
+    { dnd:"Fighter", sw:"Mandalorian / Rebel Commando",
+      desc:"Masters of weaponry. Ranged (Archery style) for blasters, or melee for vibro-weapons. Action Surge represents combat adrenaline.",
+      features:"Second Wind (Bacta Injector), Action Surge (Overdrive)." },
+    { dnd:"Rogue", sw:"Scoundrel / Slicer",
+      desc:"Smugglers and spies. Sneak Attack hits weak points in armor. Expertise in Thieves' Tools becomes Slicer Kits.",
+      features:"Sneak Attack (Precision Shot), Cunning Action (Tactical Retreat)." },
+    { dnd:"Paladin", sw:"Jedi Guardian",
+      desc:"Heavy-hitting, armored Jedi. Divine Smite is channeling the Force directly into your lightsaber strikes to melt through durasteel.",
+      features:"Divine Smite (Force Strike), Lay on Hands (Force Mend)." },
+    { dnd:"Sorcerer", sw:"Force Adept / Sith Inquisitor",
+      desc:"Raw, innate connection to the Force. Metamagic bends Force rules — twin-cast pushes, silent incantations.",
+      features:"Font of Magic (Force Reserves), Metamagic (Force Manipulation)." },
+    { dnd:"Monk", sw:"Jedi Sentinel / Martial Artist",
+      desc:"Unarmored, agile fighters. Deflect Missiles translates perfectly to batting blaster bolts away.",
+      features:"Martial Arts (Teräs Käsi), Ki Points (Force Focus), Deflect Missiles." },
+    { dnd:"Ranger", sw:"Bounty Hunter / Scout",
+      desc:"Trackers of the Outer Rim. Hunter's Mark is a tracking fob or HUD lock-on. Spells become high-tech gadgets.",
+      features:"Favored Enemy (Bounty Targets), Hunter's Mark (Target Lock)." },
+    { dnd:"Artificer", sw:"Droidsmith / Engineer",
+      desc:"Tech wizards. Spells deploy as mini-droids, wrist flamethrowers, or specialized grenades. Infusions are weapon mods.",
+      features:"Magical Tinkering (Tech Jury-Rigging), Infuse Item (Weapon Mods)." },
+    { dnd:"Cleric", sw:"Force Priest / Order Devotee",
+      desc:"Channels devotion to the Force or an ancient creed. Healing word is a wave of revitalizing Light Side energy.",
+      features:"Channel Divinity (Force Conviction), Turn Undead (Banish Dark Spirits)." },
+    { dnd:"Wizard", sw:"Sith Sorcerer / Force Scholar",
+      desc:"Studied user of the Force. Spellbook is a holocron filled with cataloged techniques.",
+      features:"Spellbook (Personal Holocron), Arcane Recovery (Meditation)." },
+    { dnd:"Bard", sw:"Diplomat / Spy",
+      desc:"Words and presence. Bardic Inspiration is rallying squad-level morale; Vicious Mockery is psychological warfare via comlink.",
+      features:"Bardic Inspiration (Tactical Comms), Cutting Words (Disrupt Concentration)." },
+    { dnd:"Warlock", sw:"Dark Side Apprentice / Cult Adept",
+      desc:"Bound to a powerful patron — an ancient Sith spirit, a Bendu, an Inquisitor master. Pact magic is borrowed dark Force.",
+      features:"Eldritch Blast (Focused Push), Pact Boon (Patron's Gift)." },
+    { dnd:"Druid", sw:"Living Force Mystic",
+      desc:"Communes with the Living Force. Wild Shape is deep meditative bonding with creatures via shared consciousness.",
+      features:"Wild Shape (Beast Bond), Speak with Animals (Force Empathy)." }
+];
+
+/* ---------- DATABASE: ARMORY ---------- */
+const armoryData = [
+    // MELEE
+    { cat:"Melee", dnd:"Longsword", sw:"Vibrosword", dmg:"1d8 (1d10) Slashing", desc:"High-frequency vibrating edge cuts through plasteel. The standard mercenary blade." },
+    { cat:"Melee", dnd:"Rapier", sw:"Electrostaff", dmg:"1d8 Piercing/Bludgeoning", desc:"Finesse. Energy-arcing tips, famously used by MagnaGuards or Purge Troopers." },
+    { cat:"Melee", dnd:"Shortsword", sw:"Vibro-shiv", dmg:"1d6 Piercing", desc:"Finesse. Standard smuggler backup weapon. Easily concealed." },
+    { cat:"Melee", dnd:"Maul", sw:"Heavy Shock Maul", dmg:"2d6 Bludgeoning", desc:"Heavy, Two-Handed. Brutal kinetic impact combined with localized EMP bursts." },
+    { cat:"Melee", dnd:"Sun Blade (Magic)", sw:"Lightsaber", dmg:"1d8+1 Radiant", desc:"Finesse. The elegant weapon of a more civilized age. Cuts through almost anything." },
+    { cat:"Melee", dnd:"Greatsword", sw:"Beskar Greatblade", dmg:"2d6 Slashing", desc:"Heavy, Two-Handed. Beskar-forged blade that even shrugs off lightsaber strikes." },
+    { cat:"Melee", dnd:"Quarterstaff", sw:"Gaderffii (Gaffi Stick)", dmg:"1d6 / 1d8 Bludgeoning", desc:"Versatile Tusken Raider weapon. Brutal in trained hands." },
+    { cat:"Melee", dnd:"Dagger", sw:"Vibroknife", dmg:"1d4 Piercing", desc:"Finesse, Light, Thrown 20/60. Concealable, ubiquitous in the underworld." },
+    { cat:"Melee", dnd:"Whip", sw:"Energy Whip", dmg:"1d4 Slashing", desc:"Finesse, Reach 10ft. Plasma-coiled lash, favored by gladiators on Nar Shaddaa." },
+
+    // RANGED
+    { cat:"Ranged", dnd:"Shortbow", sw:"Blaster Pistol", dmg:"1d6 Energy", desc:"Range 80/320. Reliable sidearm. Standard issue for Rebel officers." },
+    { cat:"Ranged", dnd:"Light Crossbow", sw:"Blaster Carbine", dmg:"1d8 Energy", desc:"Range 80/320. Compact, rapid-fire military rifle used by Stormtroopers." },
+    { cat:"Ranged", dnd:"Longbow", sw:"Heavy Blaster Rifle", dmg:"1d8 Energy", desc:"Range 150/600. Heavy, two-handed. Used by snipers and commandos." },
+    { cat:"Ranged", dnd:"Heavy Crossbow", sw:"Bowcaster", dmg:"1d10 Energy", desc:"Range 100/400. Heavy, Loading. Wookiee weapon firing magnetic quarrels." },
+    { cat:"Ranged", dnd:"Hand Crossbow", sw:"Hold-out Blaster", dmg:"1d6 Energy", desc:"Range 30/120. Concealable, perfect for dual-wielding Scoundrels." },
+    { cat:"Ranged", dnd:"Sling", sw:"Wrist Rocket", dmg:"1d4 Bludgeoning", desc:"Range 30/120. Mandalorian wrist-mounted micro-projectile launcher." },
+    { cat:"Ranged", dnd:"Net", sw:"Magnetic Snare", dmg:"Restrain", desc:"Range 5/15. Wrist-launched magnetic net for capturing bounties alive." },
+
+    // EXPLOSIVES
+    { cat:"Explosives", dnd:"Javelin", sw:"Frag Grenade", dmg:"1d6 Piercing", desc:"Thrown 30/120. Standard anti-personnel shrapnel charge." },
+    { cat:"Explosives", dnd:"Alchemist's Fire", sw:"Incendiary Charge", dmg:"1d4 Fire / turn", desc:"Covers target in burning chemical gel. Action to extinguish." },
+    { cat:"Explosives", dnd:"Holy Water", sw:"Ion Grenade", dmg:"2d6 Radiant (vs Droids)", desc:"Specifically designed to scramble circuitry and overload droid combat frames." },
+    { cat:"Explosives", dnd:"Acid Vial", sw:"Corrosive Canister", dmg:"2d6 Acid", desc:"Thrown 20/60. Industrial solvent gel; eats through armor over rounds." },
+    { cat:"Explosives", dnd:"Oil Flask", sw:"Coaxium Flask", dmg:"Difficult Terrain / 5 fire", desc:"Spilled hyperfuel — dangerously flammable, slick to walk on." },
+
+    // ARMOR
+    { cat:"Armor", dnd:"Leather", sw:"Smuggler Jacket", dmg:"11 + Dex AC", desc:"Thick, blast-resistant fabrics favored in the Outer Rim." },
+    { cat:"Armor", dnd:"Studded Leather", sw:"Reinforced Flight Suit", dmg:"12 + Dex AC", desc:"Rebel pilot kit with embedded ablative plates." },
+    { cat:"Armor", dnd:"Chain Shirt", sw:"Light Combat Mesh", dmg:"13 + Dex (Max 2)", desc:"Layered ceramoplast under fatigues. Standard militia issue." },
+    { cat:"Armor", dnd:"Breastplate", sw:"Trooper Plasteel", dmg:"14 + Dex (Max 2)", desc:"Heavy chest piece allowing for unhindered tactical movement." },
+    { cat:"Armor", dnd:"Half Plate", sw:"Scout Trooper Armor", dmg:"15 + Dex (Max 2)", desc:"Mobility-focused armor with HUD-integrated helmet." },
+    { cat:"Armor", dnd:"Chain Mail", sw:"Stormtrooper Armor", dmg:"16 AC", desc:"Full-body plasteel kit. Disadvantage on Stealth." },
+    { cat:"Armor", dnd:"Plate", sw:"Heavy Mandalorian Beskar", dmg:"18 AC", desc:"Full environmental seal, beskar plating. Disadvantage on Stealth." },
+    { cat:"Armor", dnd:"Shield", sw:"Energy Shield / Riot Shield", dmg:"+2 AC", desc:"Wrist-mounted deflector screen or Imperial heavy riot plasteel." },
+
+    // GEAR
+    { cat:"Gear", dnd:"Potion of Healing", sw:"Bacta Stim", dmg:"2d4+2 HP", desc:"Injector pen that rapidly accelerates cellular repair." },
+    { cat:"Gear", dnd:"Potion of Greater Healing", sw:"Bacta Patch", dmg:"4d4+4 HP", desc:"Adhesive bacta-soaked dressing — slower than a stim but more effective." },
+    { cat:"Gear", dnd:"Thieves' Tools", sw:"Slicer Kit", dmg:"Tool", desc:"Datapads and security spikes used to bypass blast doors and terminals." },
+    { cat:"Gear", dnd:"Rope, Hempen", sw:"Fibercord Grapple", dmg:"50 ft", desc:"Ultra-thin, high-tensile fibercord with a magnetic grapnel." },
+    { cat:"Gear", dnd:"Tinderbox", sw:"Plasma Igniter", dmg:"Tool", desc:"Pocket fusion lighter — also useful for cauterizing wounds." },
+    { cat:"Gear", dnd:"Holy Symbol", sw:"Jedi Holocron / Sith Pyramid", dmg:"Focus", desc:"Crystalline data storage matrix containing teachings of the order." },
+    { cat:"Gear", dnd:"Component Pouch", sw:"Utility Belt", dmg:"Focus", desc:"Pouches of focusing crystals, kyber chips, and ritual components." },
+    { cat:"Gear", dnd:"Spyglass", sw:"Electrobinoculars", dmg:"Tool", desc:"Magnification with thermal, night vision, and rangefinder modes." },
+    { cat:"Gear", dnd:"Healer's Kit", sw:"Field Medkit", dmg:"10 charges", desc:"Compact field surgery kit; stabilizes and stops bleeding." },
+    { cat:"Gear", dnd:"Lantern, Hooded", sw:"Glow Rod", dmg:"30/30 ft light", desc:"Adjustable beam handlight standard on every ship." }
+];
+
+/* ---------- DATABASE: HOLOCRON (SPELLS) ----------
+   classes uses single-letter codes:
+   S=Sorcerer  W=Wizard  P=Paladin  R=Ranger  B=Bard
+   C=Cleric    D=Druid   A=Artificer  K=Warlock(K for "patron")  M=Monk(subclass)
+*/
+const spellData = [
+    /* CANTRIPS */
+    { lvl:"Cantrip", dnd:"Fire Bolt", sw:"Force Combustion", classes:["S","W","A"], desc:"1d10 Fire. Agitate molecules through the Force until they ignite (or fire a wrist rocket)." },
+    { lvl:"Cantrip", dnd:"Mage Hand", sw:"Force Pull/Push (Minor)", classes:["S","W","B","K"], desc:"Telekinetically manipulate small objects up to 30 ft away." },
+    { lvl:"Cantrip", dnd:"Ray of Frost", sw:"Force Chill / Cryo", classes:["S","W","A"], desc:"1d8 Cold, slows movement. Drain thermal energy via the dark side, or spray liquid carbonite." },
+    { lvl:"Cantrip", dnd:"Vicious Mockery", sw:"Mind Trick (Doubt)", classes:["B"], desc:"1d4 Psychic, Disadv. Plant deep fear directly into a weak mind." },
+    { lvl:"Cantrip", dnd:"Eldritch Blast", sw:"Focused Force Push", classes:["K"], desc:"1d10 Force. Unerring telekinetic blasts — multiple beams = rapid combo strikes." },
+    { lvl:"Cantrip", dnd:"Shocking Grasp", sw:"Minor Force Lightning", classes:["S","W","A"], desc:"1d8 Lightning. No reactions. Short-circuit a droid or overload a nervous system." },
+    { lvl:"Cantrip", dnd:"Minor Illusion", sw:"Holographic Decoy", classes:["B","S","W"], desc:"5 ft sound or image. Localized mind trick or deployed hologram projector." },
+    { lvl:"Cantrip", dnd:"Guidance", sw:"Force Premonition", classes:["C","D","A"], desc:"+1d4 to a check. Briefly glimpse the immediate future." },
+    { lvl:"Cantrip", dnd:"Sacred Flame", sw:"Force Judgment", classes:["C"], desc:"1d8 Radiant, no cover. A righteous burst of Light Side energy." },
+    { lvl:"Cantrip", dnd:"Light", sw:"Force Illumination", classes:["B","C","S","W"], desc:"Object emits 20 ft bright light. Or just clip on a glow rod." },
+    { lvl:"Cantrip", dnd:"Mending", sw:"Tech Repair", classes:["B","C","D","S","W","A"], desc:"Restore a single break or tear. Field repair on damaged equipment." },
+    { lvl:"Cantrip", dnd:"Prestidigitation", sw:"Force Sleight", classes:["B","S","W"], desc:"Minor harmless effects. Heat, chill, clean — small kinetic showmanship." },
+    { lvl:"Cantrip", dnd:"Druidcraft", sw:"Living Force Whisper", classes:["D"], desc:"Predict weather, light flame, sense plants. Commune with the Living Force." },
+    { lvl:"Cantrip", dnd:"Poison Spray", sw:"Toxin Mister", classes:["D","S","W","K","A"], desc:"1d12 Poison. Concentrated neurotoxin spray — Geonosian-style or alchemical." },
+    { lvl:"Cantrip", dnd:"True Strike", sw:"Combat Foresight", classes:["B","S","W","K"], desc:"Advantage on next attack. See the enemy's move before they make it." },
+
+    /* LEVEL 1 */
+    { lvl:"1st", dnd:"Magic Missile", sw:"Force Barrage", classes:["S","W"], desc:"3 darts, 1d4+1 Force. Unerring telekinetic strikes or homing wrist-munitions." },
+    { lvl:"1st", dnd:"Shield", sw:"Force Barrier / Deflector", classes:["S","W","K"], desc:"+5 AC reaction. Form a localized telekinetic wall to block blaster bolts." },
+    { lvl:"1st", dnd:"Cure Wounds", sw:"Force Heal", classes:["B","C","D","P","R","A"], desc:"1d8+Mod Healing. Channel the living Force to knit flesh and bone." },
+    { lvl:"1st", dnd:"Healing Word", sw:"Force Revitalize", classes:["B","C","D"], desc:"1d4+Mod (Bonus Action). Surge of Force energy across the battlefield." },
+    { lvl:"1st", dnd:"Thunderwave", sw:"Force Repulse", classes:["B","D","S","W"], desc:"2d8 Thunder. 15 ft cube. Outward telekinetic burst throwing enemies back." },
+    { lvl:"1st", dnd:"Charm Person", sw:"Jedi Mind Trick", classes:["B","D","S","W","K"], desc:"Wis save. Target treats you as friendly. \"These aren't the droids…\"" },
+    { lvl:"1st", dnd:"Command", sw:"Dominate Mind", classes:["C","P","B","K"], desc:"One-word command they must obey. Pure Force compulsion." },
+    { lvl:"1st", dnd:"Feather Fall", sw:"Force Cushion", classes:["B","S","W","A"], desc:"Reaction. Manipulate gravity to land safely." },
+    { lvl:"1st", dnd:"Guiding Bolt", sw:"Force Mark", classes:["C"], desc:"4d6 Radiant. Next attack vs target has advantage." },
+    { lvl:"1st", dnd:"Hunter's Mark", sw:"Bounty Tracker HUD", classes:["R"], desc:"Bonus Action. +1d6 damage to target. Thermal tracking lock-on." },
+    { lvl:"1st", dnd:"Bless", sw:"Battle Meditation (Minor)", classes:["C","P"], desc:"+1d4 to attacks/saves for 3 allies. Aura of Force confidence." },
+    { lvl:"1st", dnd:"Burning Hands", sw:"Flamethrower Burst", classes:["S","W"], desc:"3d6 Fire. 15 ft cone. Wrist-mounted flame projector or Force-channeled heat." },
+    { lvl:"1st", dnd:"Detect Magic", sw:"Force Sense", classes:["B","C","D","P","R","S","W","A"], desc:"Sense the Force around you within 30 ft." },
+    { lvl:"1st", dnd:"Disguise Self", sw:"Holo-Mask", classes:["B","S","W","A"], desc:"Visual disguise. A localized hologram emitter on your collar." },
+    { lvl:"1st", dnd:"Faerie Fire", sw:"Tracer Marker", classes:["B","D"], desc:"Targets glow, advantage to hit. Photon-tracer paint or Force aura." },
+    { lvl:"1st", dnd:"Sleep", sw:"Stun Pulse", classes:["B","S","W"], desc:"5d8 HP of creatures fall unconscious. Wide-area neural stunner pulse." },
+    { lvl:"1st", dnd:"Sanctuary", sw:"Force Aversion", classes:["C","A"], desc:"Attackers must save or pick another target. Subtly turn aside enemy intent." },
+
+    /* LEVEL 2 */
+    { lvl:"2nd", dnd:"Hold Person", sw:"Force Stasis / Choke", classes:["B","C","D","S","W","K"], desc:"Wis save. Paralyze humanoid in invisible telekinetic grip." },
+    { lvl:"2nd", dnd:"Invisibility", sw:"Force Cloak / Stealth Field", classes:["B","S","W","A","K"], desc:"Target invisible. Cloud minds, or activate a light-bending belt." },
+    { lvl:"2nd", dnd:"Scorching Ray", sw:"Force Rend / Flamethrower", classes:["S","W"], desc:"3 rays, 2d6 Fire each. Telekinetic tear or sweeping flame projector." },
+    { lvl:"2nd", dnd:"Shatter", sw:"Force Crush / Thermal Imploder", classes:["B","S","W","K"], desc:"3d8 Thunder. 10 ft radius. Crippling localized crush." },
+    { lvl:"2nd", dnd:"Misty Step", sw:"Force Dash", classes:["S","W","K"], desc:"Bonus action teleport 30 ft. Move faster than the eye can track." },
+    { lvl:"2nd", dnd:"Suggestion", sw:"Advanced Mind Trick", classes:["B","S","W","K"], desc:"Implant a course of action. \"You will open these blast doors.\"" },
+    { lvl:"2nd", dnd:"Spiritual Weapon", sw:"Telekinetic Lightsaber", classes:["C"], desc:"Bonus action. 1d8+Mod Force. A floating saber swinging telekinetically." },
+    { lvl:"2nd", dnd:"Web", sw:"Cryo-Net / Carbonite Spray", classes:["S","W","A"], desc:"20 ft cube of difficult/restraining terrain. Hi-tech snare or floor-freeze." },
+    { lvl:"2nd", dnd:"Aid", sw:"Field Stim Boost", classes:["C","P","R","A"], desc:"+5 max HP for up to 3 allies for 8 hours. Combat stim cocktail." },
+    { lvl:"2nd", dnd:"Blur", sw:"Force Speed Cloud", classes:["S","W","A"], desc:"Disadvantage on attacks vs you. Move so fast your outline blurs." },
+    { lvl:"2nd", dnd:"Heat Metal", sw:"Armor Overheat", classes:["B","D","A"], desc:"2d8 Fire/turn. Drop or burn. Remote-overload power cell or Force-heat plasteel." },
+    { lvl:"2nd", dnd:"Knock", sw:"Master Slicer", classes:["B","S","W"], desc:"Open any locked or sealed door. The Force opens all locks." },
+    { lvl:"2nd", dnd:"Lesser Restoration", sw:"Bacta Cleansing", classes:["B","C","D","P","R","A"], desc:"End disease, paralysis, poison. Field stabilization protocol." },
+    { lvl:"2nd", dnd:"Mirror Image", sw:"Force Echoes", classes:["S","W","K"], desc:"3 illusory duplicates of yourself. Force-projected ghosts confuse attackers." },
+    { lvl:"2nd", dnd:"See Invisibility", sw:"Force Vision", classes:["B","S","W","A"], desc:"See cloaked enemies and hidden Force users." },
+    { lvl:"2nd", dnd:"Spike Growth", sw:"Mine Field", classes:["D","R"], desc:"20 ft area of difficult terrain, 2d4 piercing/5ft. Scatter mines or telekinetic spikes." },
+
+    /* LEVEL 3 */
+    { lvl:"3rd", dnd:"Fireball", sw:"Force Storm / Heavy Detonator", classes:["S","W"], desc:"8d6 Fire. 20 ft radius. Massive telekinetic devastation, or military-grade explosive." },
+    { lvl:"3rd", dnd:"Fly", sw:"Force Levitation / Jetpack", classes:["S","W","A","K"], desc:"60 ft fly speed. Defy gravity, or ignite your Z-6 Jetpack." },
+    { lvl:"3rd", dnd:"Haste", sw:"Battle Meditation / Speed", classes:["S","W","A"], desc:"2× speed, +2 AC, extra action. Tap deeply into the combat flow." },
+    { lvl:"3rd", dnd:"Counterspell", sw:"Force Absorb / Deflection", classes:["S","W","K"], desc:"Reaction. Catch raw Force energy or telekinetically crush a detonator." },
+    { lvl:"3rd", dnd:"Lightning Bolt", sw:"Sith Lightning", classes:["S","W"], desc:"8d6 Lightning. 100 ft line. The pure, hateful energy of the dark side." },
+    { lvl:"3rd", dnd:"Dispel Magic", sw:"Force Sever / Slice Override", classes:["B","C","D","P","S","W","K","A"], desc:"End ongoing effects. Cut a target off from the Force, or reboot a system." },
+    { lvl:"3rd", dnd:"Mass Healing Word", sw:"Battlefield Vitality", classes:["C"], desc:"1d4+Mod healing to up to 6 creatures. Wave of Light Side energy." },
+    { lvl:"3rd", dnd:"Spirit Guardians", sw:"Saber Barrier / Droid Swarm", classes:["C"], desc:"15 ft aura. 3d8 damage/slow. Orbiting telekinetic debris or buzz droids." },
+    { lvl:"3rd", dnd:"Revivify", sw:"Bacta Tank Field Module", classes:["A","C","P","R"], desc:"Return creature dead ≤1 min to 1 HP. Emergency cardiac shock + bacta flush." },
+    { lvl:"3rd", dnd:"Slow", sw:"Force Drag", classes:["S","W"], desc:"6 creatures, halved speed and one action only. Crush them under telekinetic weight." },
+    { lvl:"3rd", dnd:"Hypnotic Pattern", sw:"Mass Mind Trick", classes:["B","S","W","K"], desc:"Charm 6 creatures, incapacitated and slow. Hypnotic Force projection." },
+    { lvl:"3rd", dnd:"Major Image", sw:"Battlefield Hologram", classes:["B","S","W"], desc:"20 ft cube illusion with sound, smell, temp. Tactical deception hologram." },
+    { lvl:"3rd", dnd:"Animate Dead", sw:"Reactivate Combat Droids", classes:["C","W","K"], desc:"Bring fallen droids/skeletons under your command. Slicer override of inert frames." },
+    { lvl:"3rd", dnd:"Vampiric Touch", sw:"Force Drain", classes:["S","W","K"], desc:"3d6 Necrotic, half healed back. Steal life energy through the dark side." },
+
+    /* LEVEL 4 */
+    { lvl:"4th", dnd:"Wall of Fire", sw:"Plasma Barrier", classes:["D","S","W"], desc:"5d8 Fire. 60 ft wall. Force-channeled fire wall or deployed plasma emitter." },
+    { lvl:"4th", dnd:"Polymorph", sw:"Beast Bond Transformation", classes:["B","D","S","W"], desc:"Transform target into beast. Living-Force consciousness merge or bio-engineering serum." },
+    { lvl:"4th", dnd:"Greater Invisibility", sw:"Phase-Shift Cloak", classes:["B","S","W"], desc:"Invisible while attacking. Advanced light-bending or perfect Force concealment." },
+    { lvl:"4th", dnd:"Banishment", sw:"Force Exile", classes:["C","P","S","W","K"], desc:"Send target to another plane. Hurl them through a Force-rift." },
+    { lvl:"4th", dnd:"Stoneskin", sw:"Force Armor", classes:["D","R","S","W","A"], desc:"Resist non-magical bludgeon/pierce/slash. Telekinetic kinetic-absorption layer." },
+    { lvl:"4th", dnd:"Dimension Door", sw:"Force Phase", classes:["B","S","W","K"], desc:"Teleport 500 ft + 1 ally. Briefly slip into the Force itself." },
+    { lvl:"4th", dnd:"Confusion", sw:"Mass Mind Scramble", classes:["B","D","S","W","K"], desc:"Targets act randomly. Overwhelming psychic assault." },
+    { lvl:"4th", dnd:"Death Ward", sw:"Last Stand Stim", classes:["C","P"], desc:"Negates first killing blow. Auto-injecting bacta surge on critical hit." },
+    { lvl:"4th", dnd:"Ice Storm", sw:"Cryo Bombardment", classes:["D","S","W"], desc:"4d6 Cold. 20 ft area. Orbital cryo-strike or Force-conjured hailstorm." },
+
+    /* LEVEL 5 */
+    { lvl:"5th", dnd:"Cone of Cold", sw:"Cryo-Detonator Wave", classes:["S","W"], desc:"8d8 Cold. 60 ft cone. Mass thermal drain through the dark side." },
+    { lvl:"5th", dnd:"Hold Monster", sw:"Force Stasis (Greater)", classes:["B","S","W","K"], desc:"Paralyze any creature. The legendary frozen-in-place Force grip." },
+    { lvl:"5th", dnd:"Telekinesis", sw:"Force Lift / Crush", classes:["S","W"], desc:"Move creatures and objects up to 1000 lbs. The Vader treatment." },
+    { lvl:"5th", dnd:"Mass Cure Wounds", sw:"Battlefield Bacta Burst", classes:["B","C","D"], desc:"3d8+Mod healing to 6 creatures. Aerosol bacta cloud or Light wave." },
+    { lvl:"5th", dnd:"Wall of Force", sw:"Energy Shield Wall", classes:["S","W"], desc:"10 panels of indestructible Force barrier. Deployed deflector shield." },
+    { lvl:"5th", dnd:"Dominate Person", sw:"Mind Control (Major)", classes:["B","S","W","K"], desc:"Take complete control of a humanoid. Overwhelming Force dominance." },
+    { lvl:"5th", dnd:"Raise Dead", sw:"Cryo-Revival Protocol", classes:["B","C","P"], desc:"Restore a creature dead ≤10 days. Emergency stasis + bacta resurrection." },
+    { lvl:"5th", dnd:"Flame Strike", sw:"Orbital Strike", classes:["C"], desc:"4d6 Fire + 4d6 Radiant. 10 ft radius. Called orbital bombardment beam." },
+    { lvl:"5th", dnd:"Scrying", sw:"Long-Range Force Vision", classes:["B","C","D","W","K"], desc:"Remote-view a target across the galaxy via the Force." },
+
+    /* LEVEL 6+ (signature spells) */
+    { lvl:"6th", dnd:"Disintegrate", sw:"Sith Annihilation Beam", classes:["S","W"], desc:"10d6+40 Force. Instant ash if reduced to 0 HP. Vaporize via dark side." },
+    { lvl:"6th", dnd:"Heal", sw:"Major Bacta Infusion", classes:["C","D"], desc:"70 HP, end disease/blind/deaf. Full bacta-tank effect in seconds." },
+    { lvl:"6th", dnd:"Chain Lightning", sw:"Sith Lightning Storm", classes:["S","W"], desc:"10d8 Lightning, 4 targets. Unleash arcing dark side fury." },
+    { lvl:"6th", dnd:"Mass Suggestion", sw:"Crowd Mind Trick", classes:["B","S","W","K"], desc:"Suggestion on 12 creatures. Mass Force compulsion." },
+    { lvl:"7th", dnd:"Finger of Death", sw:"Force Choke (Lethal)", classes:["S","W","K"], desc:"7d8+30 Necrotic. Vader's signature, fatal grip on the throat." },
+    { lvl:"7th", dnd:"Fire Storm", sw:"Turbolaser Salvo", classes:["C","D","S"], desc:"7d10 Fire across 10 cubes. Coordinated capital-ship fire support." },
+    { lvl:"8th", dnd:"Power Word Stun", sw:"Force Concussion", classes:["B","S","W","K"], desc:"Stun if ≤150 HP. Overwhelming Force impact to the mind." },
+    { lvl:"8th", dnd:"Dominate Monster", sw:"Force Domination", classes:["B","S","W","K"], desc:"Control any creature. Total Force-bend of will." },
+    { lvl:"9th", dnd:"Power Word Kill", sw:"Sith Death Word", classes:["B","S","W","K"], desc:"Kill if ≤100 HP. The forbidden technique." },
+    { lvl:"9th", dnd:"Wish", sw:"Galactic Force Convergence", classes:["S","W"], desc:"Bend reality. The Force itself answers your call." },
+    { lvl:"9th", dnd:"Meteor Swarm", sw:"Orbital Bombardment", classes:["S","W"], desc:"40d6 fire/bludgeoning. Capital-ship orbital strike — galaxy-shaking." }
+];
+
+/* ---------- MILESTONE TITLES ---------- */
+const milestones = {
+    Paladin:   [[1,"Padawan"],[5,"Jedi Knight"],[11,"Jedi Master"],[17,"Jedi Council Member"]],
+    Sorcerer:  [[1,"Acolyte"],[5,"Force Adept"],[11,"Sith Lord"],[17,"Dark Lord of the Sith"]],
+    Wizard:    [[1,"Initiate"],[5,"Force Scholar"],[11,"Holocron Keeper"],[17,"Grand Master"]],
+    Warlock:   [[1,"Aspirant"],[5,"Inquisitor"],[11,"Grand Inquisitor"],[17,"Sith Apprentice"]],
+    Cleric:    [[1,"Devotee"],[5,"Force Priest"],[11,"High Priest"],[17,"Voice of the Order"]],
+    Druid:     [[1,"Seeker"],[5,"Living-Force Mystic"],[11,"Force Seer"],[17,"One With the Force"]],
+    Bard:      [[1,"Operative"],[5,"Senatorial Aide"],[11,"Master Diplomat"],[17,"Senator"]],
+    Monk:      [[1,"Aspirant"],[5,"Jedi Sentinel"],[11,"Battle Master"],[17,"Living Weapon"]],
+    Fighter:   [[1,"Recruit"],[5,"Veteran Commando"],[11,"Squad Captain"],[17,"Sector Commander"]],
+    Ranger:    [[1,"Greenhorn"],[5,"Bounty Hunter"],[11,"Master Tracker"],[17,"Legendary Hunter"]],
+    Rogue:     [[1,"Smuggler"],[5,"Master Slicer"],[11,"Crime Boss"],[17,"Shadow of the Underworld"]],
+    Artificer: [[1,"Apprentice Tinker"],[5,"Droidsmith"],[11,"Master Engineer"],[17,"Architect of War"]]
+};
+
+/* ---------- 5e CASTER PROGRESSION (for "MINE" filter) ---------- */
+/* Returns max spell LEVEL a character of given class+level can cast (cantrips=0). */
+function maxSpellLevel(cls, lvl) {
+    if (!cls || !lvl) return -1;
+    const full = (l) => l>=17?9 : l>=15?8 : l>=13?7 : l>=11?6 : l>=9?5 : l>=7?4 : l>=5?3 : l>=3?2 : 1;
+    const half = (l) => l>=17?5 : l>=13?4 : l>=9?3 : l>=5?2 : l>=2?1 : 0;
+    const third = (l) => l>=19?4 : l>=13?3 : l>=7?2 : l>=3?1 : 0;
+    const warlock = (l) => l>=9?5 : l>=7?4 : l>=5?3 : l>=3?2 : 1;
+    switch (cls) {
+        case "Sorcerer": case "Wizard": case "Cleric": case "Druid": case "Bard": return full(lvl);
+        case "Paladin": case "Ranger": case "Artificer": return Math.max(half(lvl), cls==="Artificer"?(lvl>=2?1:0):0);
+        case "Warlock": return warlock(lvl);
+        case "Fighter": case "Rogue": return third(lvl);  // Eldritch Knight / Arcane Trickster subclass
+        case "Monk": return 0;                            // No spells per se
+        default: return 0;
+    }
+}
+/* Letter codes used in spell.classes */
+const classCodeMap = {
+    Sorcerer:"S", Wizard:"W", Cleric:"C", Druid:"D", Bard:"B",
+    Paladin:"P", Ranger:"R", Artificer:"A", Warlock:"K",
+    Fighter:"W",   // Eldritch Knight uses Wizard list
+    Rogue:"W",     // Arcane Trickster uses Wizard list (limited)
+    Monk:null
+};
+
+/* ---------- STATE ---------- */
+const STORAGE_KEY = "sw5e_datapad_v2";
+let state = {
+    name: "",
+    cls: "",
+    level: 1,
+    skin: "rebellion",
+    scan: 30,
+    static: 4,
+    favorites: {},      // { "spell:Fire Bolt": true, "armory:Vibrosword": true }
+    spellLevel: "All",
+    spellMine: false,
+    armoryCat: "All"
+};
+
+function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
+function loadState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) state = Object.assign(state, JSON.parse(raw));
+    } catch(e){}
+}
+
+/* ---------- HELPERS ---------- */
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function highlight(text, query) {
+    if (!query) return escapeHtml(text);
+    const escaped = escapeHtml(text);
+    const q = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return escaped.replace(new RegExp(`(${q})`, 'ig'), '<mark class="hit">$1</mark>');
+}
+function getMilestone(cls, lvl) {
+    const m = milestones[cls];
+    if (!m) return null;
+    let title = m[0][1];
+    for (const [thr, t] of m) if (lvl >= thr) title = t;
+    return title;
+}
+function favKey(type, name) { return `${type}:${name}`; }
+
+/* ---------- RENDER: HEADER ---------- */
+function renderHeader() {
+    const titleEl = document.getElementById('hdr-title');
+    const subEl = document.getElementById('hdr-sub');
+    const statusEl = document.getElementById('hdr-status');
+    const rankEl = document.getElementById('hdr-rank');
+
+    if (state.name && state.cls) {
+        titleEl.textContent = state.name.toUpperCase();
+        subEl.textContent = `${state.cls} // Operative Channel`;
+        const rank = getMilestone(state.cls, parseInt(state.level)||1);
+        if (rank) {
+            rankEl.textContent = `[${rank.toUpperCase()}]`;
+            rankEl.classList.remove('hidden');
+            statusEl.textContent = `LVL ${state.level}`;
+        }
+    } else {
+        titleEl.textContent = "Alliance Net";
+        subEl.textContent = "Op-Guide // Bright Jewel Sector";
+        statusEl.textContent = "v5.5.0_SW";
+        rankEl.classList.add('hidden');
+    }
+}
+
+/* ---------- RENDER: PROFILES ---------- */
+function renderClasses() {
+    const c = document.getElementById('classes-container');
+    c.innerHTML = classData.map((cl, i) => {
+        const isMine = cl.dnd === state.cls;
+        return `
+        <div class="data-card p-4" style="animation-delay:${i*0.03}s">
+            <div class="flex justify-between items-start gap-2 mb-2">
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-lg font-bold leading-tight" style="color: var(--hud);">${cl.sw}</h3>
+                    ${isMine ? `<span class="text-[10px] datapad-font uppercase tracking-widest" style="color: var(--accent);">// active profile</span>` : ''}
+                </div>
+                <span class="datapad-font text-xs uppercase tracking-widest border border-slate-700 px-2 py-0.5 bg-slate-900 rounded shrink-0" style="color: ${isMine?'var(--accent)':'#94a3b8'};">5.5e: ${cl.dnd}</span>
             </div>
-            <button onclick="closeDetails()" class="text-slate-400 hover:text-white p-1">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <p class="text-sm text-slate-300 mb-3">${cl.desc}</p>
+            <div class="bg-slate-900/50 p-2 rounded border border-slate-800">
+                <span class="text-[10px] uppercase font-bold block mb-1 datapad-font tracking-widest" style="color: var(--hud-deep);">Key Translations</span>
+                <p class="text-xs text-slate-400 datapad-font">${cl.features}</p>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+/* ---------- RENDER: ARMORY ---------- */
+function renderArmoryFilters() {
+    const c = document.getElementById('armory-filters');
+    const cats = ["All","Favorites",...new Set(armoryData.map(i=>i.cat))];
+    c.innerHTML = cats.map(cat => {
+        const active = (cat === state.armoryCat);
+        const cls = cat==="Favorites" ? `chip chip-fav ${active?'active':''}` : `chip ${active?'active':''}`;
+        return `<button class="${cls}" onclick="setArmoryCat('${cat}')">${cat==="Favorites" ? "★ Saved" : cat}</button>`;
+    }).join('');
+}
+function setArmoryCat(cat) { state.armoryCat = cat; saveState(); renderArmoryFilters(); renderArmory(); }
+
+function renderArmory() {
+    const q = (document.getElementById('search-armory')?.value || '').toLowerCase().trim();
+    const c = document.getElementById('armory-container');
+
+    let items = armoryData.filter(it => {
+        if (state.armoryCat === "Favorites") {
+            if (!state.favorites[favKey('armory', it.sw)]) return false;
+        } else if (state.armoryCat !== "All" && it.cat !== state.armoryCat) {
+            return false;
+        }
+        if (!q) return true;
+        return (it.sw + " " + it.dnd + " " + it.dmg + " " + it.desc).toLowerCase().includes(q);
+    });
+
+    if (items.length === 0) {
+        c.innerHTML = emptyState(state.armoryCat==="Favorites" ? "No saved gear yet. Tap ★ on any item to save it." : "No matching gear found.");
+        return;
+    }
+
+    let html = '';
+    if (q || state.armoryCat === "Favorites") {
+        items.forEach((it,i)=> html += armoryCard(it, q, i));
+    } else if (state.armoryCat === "All") {
+        const cats = [...new Set(armoryData.map(i=>i.cat))];
+        cats.forEach(cat => {
+            const inCat = items.filter(i=>i.cat===cat);
+            if (inCat.length===0) return;
+            html += `<div class="section-header">// ${cat}</div>`;
+            inCat.forEach((it,i)=> html += armoryCard(it, q, i));
+        });
+    } else {
+        items.forEach((it,i)=> html += armoryCard(it, q, i));
+    }
+    c.innerHTML = html;
+}
+function armoryCard(it, q, i) {
+    const fk = favKey('armory', it.sw);
+    const starred = !!state.favorites[fk];
+    return `
+    <div class="data-card p-3" style="animation-delay:${Math.min(i,15)*0.02}s">
+        <div class="flex justify-between items-start gap-2 mb-1">
+            <div class="min-w-0 flex-1">
+                <span class="font-bold text-white text-base block leading-tight">${highlight(it.sw, q)}</span>
+                <span class="datapad-font text-[10px]" style="color: var(--hud-deep);">${highlight(it.dnd, q)}</span>
+            </div>
+            <button class="star-btn ${starred?'starred':''}" onclick="toggleFav('armory','${escapeHtml(it.sw).replace(/'/g,"&#39;")}')" aria-label="Save">
+                <svg width="20" height="20" fill="${starred?'currentColor':'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             </button>
         </div>
-        <div id="modal-content" class="p-4 modal-content-area text-slate-300 text-sm"></div>
-    </div>
-</div>
+        <div class="text-xs font-bold mb-2 datapad-font" style="color: var(--accent);">${escapeHtml(it.dmg)}</div>
+        <p class="text-sm text-slate-400 leading-snug">${highlight(it.desc, q)}</p>
+    </div>`;
+}
 
-<script>
-    /* =========================================================================
-       STAR WARS 5.5e PLAYER DATAPAD — v5.0 (Dark Side Slider Update)
-       ========================================================================= */
+/* ---------- RENDER: HOLOCRON ---------- */
+function renderHolocronFilters() {
+    const c = document.getElementById('holocron-filters');
+    const levels = ["All","Cantrip","1st","2nd","3rd","4th","5th","6th","7th","8th","9th"];
+    const hasChar = !!(state.cls && classCodeMap[state.cls]);
 
-    // --- STATE & UTILS ---
-    const STORAGE_KEY = "sw5e_datapad_v5";
-    let state = {
-        name: "", cls: "", level: 1, alignment: 1, skin: "rebellion", scan: 20, static: 10, flicker: 5,
-        favorites: { armory: [], spells: [] }, spellLevel: "All", spellMine: false, armoryCat: "All", viewmode: "standard"
-    };
-
-    function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
-    function loadState() { try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch(e){} }
-    
-    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-    function highlight(text, query) {
-        if (!query) return escapeHtml(text);
-        const escaped = escapeHtml(text);
-        const q = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return escaped.replace(new RegExp(`(${q})`, 'ig'), '<mark class="hit">$1</mark>');
+    let html = '';
+    if (hasChar) {
+        html += `<button class="chip chip-mine ${state.spellMine?'active':''}" onclick="toggleMine()">★ Mine</button>`;
     }
+    html += `<button class="chip chip-fav ${state.spellLevel==='Favorites' && !state.spellMine ?'active':''}" onclick="setSpellLevel('Favorites')">★ Saved</button>`;
+    levels.forEach(l => {
+        const active = !state.spellMine && state.spellLevel === l;
+        html += `<button class="chip ${active?'active':''}" onclick="setSpellLevel('${l}')">${l}</button>`;
+    });
+    c.innerHTML = html;
+}
+function setSpellLevel(l) { state.spellLevel = l; state.spellMine = false; saveState(); renderHolocronFilters(); renderHolocron(); }
+function toggleMine() {
+    state.spellMine = !state.spellMine;
+    if (state.spellMine) state.spellLevel = "All";
+    saveState(); renderHolocronFilters(); renderHolocron();
+}
 
-    // --- COMPREHENSIVE DATABASES ---
-    const classMilestones = {
-        "None": ["Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian", "Civilian"],
-        "Fighter": ["Recruit", "Grunt", "Trooper", "Veteran", "Commando", "Sergeant", "Lieutenant", "Captain", "Major", "Vanguard", "Commander", "Colonel", "General", "Elite Commando", "Champion", "Warlord", "Hero of the Rebellion", "Supreme Commander", "Mythic Warrior", "Galactic Legend"],
-        "Rogue": ["Streetrat", "Pickpocket", "Smuggler", "Scoundrel", "Operative", "Slicer", "Infiltrator", "Shadow", "Agent", "Fixer", "Master Slicer", "Assassin", "Ghost", "Syndicate Boss", "Phantom", "Mastermind", "Shadow Broker", "Mythic Scoundrel", "Unseen Legend", "Galactic Ghost"],
-        "Paladin": ["Force Sensitive", "Initiate", "Padawan", "Jedi Knight", "Jedi Guardian", "Peacekeeper", "Jedi Commander", "Jedi General", "Master Guardian", "Jedi Master", "Lightbringer", "Force Champion", "Council Member", "Grandmaster", "Sword of the Jedi", "Force Avatar", "Living Force", "Mythic Knight", "Legend of the Order", "Galactic Savior"],
-        "Sorcerer": ["Force Sensitive", "Acolyte", "Adept", "Mystic", "Sith Inquisitor", "Dark Acolyte", "Dark Jedi", "Sith Warrior", "Sith Lord", "Master Mystic", "Force Weaver", "Dark Council", "Darth", "Force Avatar", "Sith Master", "Emperor's Hand", "Dark Lord of the Sith", "Mythic Sorcerer", "Living Dark Side", "Galactic Terror"],
-        "Monk": ["Trainee", "Martial Artist", "Teräs Käsi Novice", "Jedi Sentinel", "Shadow Guard", "Teräs Käsi Adept", "Warrior Monk", "Temple Guard", "Master Sentinel", "Teräs Käsi Master", "Force Hand", "Grand Inquisitor", "Blind Master", "Grand Sentinel", "Living Weapon", "Force Martial Master", "Mythic Monk", "Grandmaster of the Hand", "Legendary Sentinel", "Galactic Ascendant"],
-        "Ranger": ["Tracker", "Scout", "Hunter", "Bounty Hunter", "Mandalorian Foundling", "Pathfinder", "Stalker", "Sniper", "Mandalorian Warrior", "Apex Hunter", "Master Tracker", "Bounty Master", "Mandalorian Captain", "Predator", "Beastmaster", "Mandalorian Commander", "Mythic Hunter", "Mand'alor", "Legendary Tracker", "Galactic Apex"],
-        "Artificer": ["Tinkerer", "Mechanic", "Droidsmith", "Engineer", "Tech Specialist", "Master Slicer", "Chief Engineer", "Innovator", "Master Mechanic", "Tech Lord", "Cyberneticist", "Master Droidsmith", "Architect", "Genius", "Tech Savant", "Master Architect", "Mythic Inventor", "Legendary Engineer", "Galactic Creator", "Machine God"],
-        "Cleric": ["Devotee", "Acolyte", "Force Priest", "Healer", "High Priest", "Seer", "Oracle", "Prelate", "Bishop", "Arch-Prelate", "Force Conduit", "Prophet", "High Seer", "Chosen", "Voice of the Force", "Divine Avatar", "Living Saint", "Mythic Priest", "Legendary Oracle", "Galactic Savior"],
-        "Wizard": ["Initiate", "Apprentice", "Force Scholar", "Researcher", "Arcanist", "Mage", "Lorekeeper", "Sage", "High Mage", "Archmage", "Holocron Keeper", "Master Scholar", "Grand Sage", "Archivist", "Master of Lore", "Force Weaver", "Grandmaster", "Mythic Scholar", "Legendary Mage", "Galactic Oracle"],
-        "Bard": ["Operative", "Entertainer", "Diplomat", "Envoy", "Senatorial Aide", "Spy", "Ambassador", "Master Spy", "Minister", "High Envoy", "Master Diplomat", "Chancellor", "Senator", "Grand Minister", "Supreme Chancellor", "Voice of the People", "Galactic Icon", "Mythic Diplomat", "Legendary Envoy", "Galactic Leader"],
-        "Warlock": ["Aspirant", "Cultist", "Dark Apprentice", "Adept", "Inquisitor", "Dark Seeker", "Shadow Adept", "Dark Master", "High Inquisitor", "Sith Lord", "Grand Inquisitor", "Dark Prophet", "Shadow Lord", "Harbinger", "Master of Shadows", "Avatar of the Dark", "Sith Master", "Mythic Warlock", "Legendary Cultist", "Galactic Terror"],
-        "Druid": ["Seeker", "Wanderer", "Living-Force Mystic", "Shaman", "Beastmaster", "Force Guide", "Earthcaller", "Nature Walker", "Master Shaman", "Force Seer", "High Mystic", "Spirit Guide", "Archdruid", "Force Avatar", "Master of the Wild", "Living Force", "One With the Force", "Mythic Shaman", "Legendary Mystic", "Galactic Warden"]
-    };
+const lvlOrder = { "Cantrip":0, "1st":1,"2nd":2,"3rd":3,"4th":4,"5th":5,"6th":6,"7th":7,"8th":8,"9th":9 };
 
-    const classData = [
-        { dnd: "Fighter", sw: "Mandalorian / Rebel Commando", hitDie: "1d10", primary: "Strength or Dexterity", saves: "Strength, Constitution", desc: "The masters of weaponry. Focus on Ranged for blasters, or Melee for Vibro-weapons.", features: "Second Wind (Bacta Injector), Action Surge (Overdrive).", fullDesc: "Whether clad in Mandalorian iron or standard-issue Rebel fatigues, Fighters are the tactical backbone of any squad. They rely on heavy armor, mastery of martial weapons, and pure grit.\n\n<b>Translation Notes:</b>\n• <b>Second Wind:</b> Flavored as an emergency auto-injector of Bacta built into your armor.\n• <b>Action Surge:</b> A burst of pure combat adrenaline, pushing your reflexes beyond normal limits for a few vital seconds.\n• <b>Archery Style:</b> Highly recommended for Blaster Rifle users, granting a flat +2 to attack rolls." },
-        { dnd: "Rogue", sw: "Scoundrel / Slicer", hitDie: "1d8", primary: "Dexterity", saves: "Dexterity, Intelligence", desc: "Smugglers and spies. Sneak Attack represents hitting weak points in armor.", features: "Sneak Attack (Precision Shot), Cunning Action (Tactical Retreat).", fullDesc: "Surviving the Outer Rim requires quick wits and a quicker blaster hand. Rogues represent the smugglers, bounty hunters, and slicers who fight dirty and strike from the shadows.\n\n<b>Translation Notes:</b>\n• <b>Sneak Attack:</b> Finding the microscopic gap in stormtrooper plating, or shooting a distracted enemy in the back. Requires a finesse weapon (Vibro-shiv) or ranged weapon (Blaster).\n• <b>Cunning Action:</b> Using a bonus action to dive behind cargo crates (Hide/Dash) or duck out of melee (Disengage).\n• <b>Thieves' Tools:</b> Replaced entirely by a Slicer Kit used for hacking doors and terminals." },
-        { dnd: "Paladin", sw: "Jedi Guardian", hitDie: "1d10", primary: "Strength & Charisma", saves: "Wisdom, Charisma", desc: "The heavy-hitting, armored Jedi. Divine Smite is channeling the Force into your strikes.", features: "Divine Smite (Force Strike), Lay on Hands (Force Mend).", fullDesc: "Jedi Guardians are the frontline warriors of the Order, often wearing partial armor over their robes. They rely on physical prowess augmented by the Force.\n\n<b>Translation Notes:</b>\n• <b>Divine Smite:</b> Channeling raw Force energy directly into your lightsaber or vibrosword, causing it to flare violently and melt through armor. (Radiant damage translates perfectly as pure plasma/energy).\n• <b>Lay on Hands:</b> Using the Light Side of the Force to knit wounds together through physical touch." },
-        { dnd: "Sorcerer", sw: "Force Adept / Sith Inquisitor", hitDie: "1d6", primary: "Charisma", saves: "Constitution, Charisma", desc: "Raw, innate connection to the Force. Metamagic allows you to bend the rules.", features: "Font of Magic (Force Reserves), Metamagic (Force Manipulation).", fullDesc: "Unlike heavily trained Jedi, Sorcerers represent those with an explosive, innate, and often untamed connection to the Force. They rely on Charisma (force of will) to manifest their powers.\n\n<b>Translation Notes:</b>\n• <b>Sorcery Points:</b> Represent your raw stamina in the Force. Burning yourself out to cast more powers.\n• <b>Metamagic:</b> The true power of an Adept. <i>Twinned Spell</i> allows you to Force Choke two targets at once. <i>Subtle Spell</i> allows you to use Mind Tricks without waving your hand or speaking." },
-        { dnd: "Monk", sw: "Jedi Sentinel / Martial Artist", hitDie: "1d8", primary: "Dexterity & Wisdom", saves: "Strength, Dexterity", desc: "Unarmored, agile fighters. Deflect Missiles perfectly translates to batting away blaster bolts.", features: "Martial Arts (Teräs Käsi), Ki Points (Force Focus), Deflect Missiles.", fullDesc: "Monks are the cinematic translation of unarmored, highly agile Jedi or masters of Teräs Käsi. They dart across the battlefield, striking with a flurry of blows.\n\n<b>Translation Notes:</b>\n• <b>Ki Points:</b> A deep, meditational focus in the living Force, used to enhance speed and strikes.\n• <b>Deflect Missiles:</b> This is the ultimate Jedi mechanic. When shot by a blaster, use your reaction to reduce the damage. If you reduce it to 0, you use your lightsaber to reflect the blaster bolt right back at the attacker!" },
-        { dnd: "Ranger", sw: "Bounty Hunter / Scout", hitDie: "1d10", primary: "Dexterity & Wisdom", saves: "Strength, Dexterity", desc: "Trackers of the Outer Rim. Hunter's Mark is a tracking fob or HUD lock-on.", features: "Favored Enemy (Bounty Targets), Hunter's Mark (Target Lock).", fullDesc: "Rangers are the ultimate survivalists and bounty hunters. They excel in tracking specific prey across the galaxy and using specialized gear to gain the upper hand in the wild.\n\n<b>Translation Notes:</b>\n• <b>Hunter's Mark:</b> Activating a thermal tracking lock in your helmet's HUD, or planting a microscopic tracker on your target to deal extra damage on every hit.\n• <b>Spells:</b> Ranger 'magic' should be flavored entirely as tech. <i>Ensnaring Strike</i> is an electrified net gun. <i>Pass without Trace</i> is a camouflage poncho." },
-        { dnd: "Artificer", sw: "Droidsmith / Engineer", hitDie: "1d8", primary: "Intelligence", saves: "Constitution, Intelligence", desc: "Tech wizards. Spells are deployed as mini-droids, wrist-mounted flamethrowers.", features: "Magical Tinkering (Tech Jury-Rigging), Infuse Item (Weapon Mods).", fullDesc: "Artificers keep the rust-bucket ships flying and the blasters firing. They are masters of technology, droids, and on-the-fly modifications.\n\n<b>Translation Notes:</b>\n• <b>Spells:</b> Like the Ranger, all Artificer magic is technology. <i>Cure Wounds</i> is a deployed medical astromech. <i>Fire Bolt</i> is a wrist-mounted miniature rocket.\n• <b>Infuse Item:</b> Modifying the party's gear. Adding a heavy magnetic coil to a Vibrosword (Enhanced Weapon)." },
-        { dnd: "Cleric", sw: "Force Priest / Order Devotee", hitDie: "1d8", primary: "Wisdom", saves: "Wisdom, Charisma", desc: "Channels devotion to the Force or an ancient creed. Master healers and buffers.", features: "Channel Divinity (Force Conviction), Turn Undead (Banish Dark Spirits).", fullDesc: "Clerics represent those deeply devoted to the spiritual side of the Force, such as the Church of the Force or ancient Sith cults.\n\n<b>Translation Notes:</b>\n• <b>Healing:</b> Powerful Light Side mending.\n• <b>Channel Divinity:</b> Calling upon the deepest reserves of your faith to turn the tide of battle." },
-        { dnd: "Wizard", sw: "Sith Sorcerer / Force Scholar", hitDie: "1d6", primary: "Intelligence", saves: "Intelligence, Wisdom", desc: "Studied user of the Force. Spellbook is a holocron filled with cataloged techniques.", features: "Spellbook (Personal Holocron), Arcane Recovery (Meditation).", fullDesc: "Wizards are the scholars. Unlike Sorcerers who rely on instinct, Wizards study ancient Holocrons to master complex Force techniques.\n\n<b>Translation Notes:</b>\n• <b>Spellbook:</b> A physical Holocron or datapad containing your accumulated knowledge.\n• <b>Ritual Casting:</b> Taking ten minutes to perform a complex Sith alchemy ritual or deep Jedi meditation." },
-        { dnd: "Bard", sw: "Diplomat / Spy", hitDie: "1d8", primary: "Charisma", saves: "Dexterity, Charisma", desc: "Words and presence. Bardic Inspiration is rallying squad-level morale.", features: "Bardic Inspiration (Tactical Comms), Cutting Words (Disrupt Concentration).", fullDesc: "Bards are the face of the party. Senators, diplomats, or high-end spies who use their presence (and subtle Force manipulation) to control the battlefield.\n\n<b>Translation Notes:</b>\n• <b>Bardic Inspiration:</b> Shouting tactical commands over the commlink or inspiring your allies with a rousing speech.\n• <b>Spells:</b> A mix of mind tricks, sonic weapons, and tactical buffs." },
-        { dnd: "Warlock", sw: "Dark Side Apprentice / Cult Adept", hitDie: "1d8", primary: "Charisma", saves: "Wisdom, Charisma", desc: "Bound to a powerful patron — an ancient Sith spirit, a Bendu, or an Inquisitor.", features: "Eldritch Blast (Focused Push), Pact Boon (Patron's Gift).", fullDesc: "Warlocks have made a pact with a higher power for quick, destructive abilities. Their magic is aggressive and recharges quickly.\n\n<b>Translation Notes:</b>\n• <b>Pact Magic:</b> You draw power directly from your master. It recharges on a short rest because you are channeling their energy, not your own.\n• <b>Invocations:</b> Permanent, passive mutations or specialized dark side training granted by your patron." },
-        { dnd: "Druid", sw: "Living Force Mystic", hitDie: "1d8", primary: "Wisdom", saves: "Intelligence, Wisdom", desc: "Communes with the Living Force. Wild Shape is deep meditative bonding with creatures.", features: "Wild Shape (Beast Bond), Speak with Animals (Force Empathy).", fullDesc: "Druids connect with the flora and fauna of the galaxy. They are the mystics living in exile on Dagobah or Lothal.\n\n<b>Translation Notes:</b>\n• <b>Wild Shape:</b> Instead of physically transforming, you can flavor this as forming a profound psychic bond with a local beast, controlling it while your real body meditates.\n• <b>Spells:</b> Manipulating the environment, causing vines to grasp enemies, or calling down lightning storms." }
-    ];
+function renderHolocron() {
+    const q = (document.getElementById('search-holocron')?.value || '').toLowerCase().trim();
+    const c = document.getElementById('holocron-container');
+    const status = document.getElementById('holocron-status');
 
-    const armoryData = [
-        // --- MELEE WEAPONS ---
-        { cat: "Melee", dnd: "Dagger", sw: "Vibro-dagger", dmg: "1d4 Piercing", props: "Finesse, Light, Thrown (20/60)", weight: "1 lb", cost: "50 cr", desc: "A short, concealable vibrating blade.", fullDesc: "A standard vibro-dagger. Highly concealable and lethal in close quarters. Often carried as a hold-out weapon by spacers and bounty hunters." },
-        { cat: "Melee", dnd: "Shortsword", sw: "Vibro-shiv", dmg: "1d6 Piercing", props: "Finesse, Light", weight: "2 lb", cost: "100 cr", desc: "Finesse. Standard smuggler backup weapon. Easily concealed.", fullDesc: "A short, brutal blade equipped with an ultrasonic vibration generator in the hilt. The high-frequency vibrations allow it to slice through flesh and light armor with terrifying ease. Highly favored by street thugs, assassins, and smugglers." },
-        { cat: "Melee", dnd: "Longsword", sw: "Vibrosword", dmg: "1d8 Slashing", props: "Versatile (1d10)", weight: "3 lb", cost: "150 cr", desc: "High-frequency vibrating edge cuts through plasteel. The standard mercenary blade.", fullDesc: "The staple weapon of mercenaries across the galaxy. The vibrosword features a long, straight durasteel blade that vibrates at incredibly high frequencies. It can be wielded with one or two hands." },
-        { cat: "Melee", dnd: "Greatsword", sw: "Heavy Vibro-blade", dmg: "2d6 Slashing", props: "Heavy, Two-Handed", weight: "6 lb", cost: "300 cr", desc: "A massive, two-handed vibrating sword.", fullDesc: "A massive vibro-weapon requiring two hands to wield effectively. The sheer kinetic force of the vibrating blade can sheer through light vehicle armor and blast doors." },
-        { cat: "Melee", dnd: "Rapier", sw: "Electrostaff", dmg: "1d8 Piercing/Bludgeon", props: "Finesse", weight: "2 lb", cost: "250 cr", desc: "Finesse. Energy-arcing tips, famously used by MagnaGuards.", fullDesc: "A long, balanced staff made of phrik or cortosis alloy, rendering it resistant to lightsaber strikes. Both ends of the staff project lethal electromagnetic energy. Wielded with elegant, precise strikes." },
-        { cat: "Melee", dnd: "Glaive / Halberd", sw: "Force Pike", dmg: "1d10 Slashing", props: "Heavy, Reach, Two-Handed", weight: "6 lb", cost: "400 cr", desc: "Long-reach polearm with a vibrating/electrified tip.", fullDesc: "Standard issue for Emperor's Royal Guards and elite planetary security. Features a long shaft granting extended reach, tipped with a highly lethal vibro-edged or electrified head." },
-        { cat: "Melee", dnd: "Maul", sw: "Heavy Shock Maul", dmg: "2d6 Bludgeoning", props: "Heavy, Two-Handed", weight: "10 lb", cost: "200 cr", desc: "Heavy, Two-Handed. Brutal kinetic impact combined with localized EMP bursts.", fullDesc: "A massive, brutal bludgeoning weapon. Upon impact, the heavy head of the maul discharges a violent shock of kinetic and electrical energy. Exceptionally heavy but devastating against armored droids." },
-        { cat: "Melee", dnd: "Whip", sw: "Neuronic Whip", dmg: "1d4 Slashing", props: "Finesse, Reach", weight: "3 lb", cost: "150 cr", desc: "A flexible, electrified whip used by slavers.", fullDesc: "A cruel weapon that delivers a paralyzing neural shock upon striking bare flesh. It possesses incredible reach and can wrap around limbs or weapons." },
-        { cat: "Melee", dnd: "Sun Blade", sw: "Training Lightsaber", dmg: "1d8 Radiant", props: "Finesse, Versatile", weight: "1 lb", cost: "500 cr", desc: "Low-power plasma blade. Sears but rarely amputates.", fullDesc: "A lightsaber whose emitter matrix has been dialed back significantly. It causes searing burns rather than amputation, rendering it safer for Padawans. Still deals radiant (plasma) damage, but lacks the pure cutting power of a true weapon." },
-        { cat: "Melee", dnd: "Vorpal Sword", sw: "True Lightsaber", dmg: "2d8 Radiant", props: "Finesse, Deadly", weight: "1 lb", cost: "Priceless", desc: "The iconic death-dealing machine. Severs limbs on a critical hit.", fullDesc: "A fully weaponized plasma blade powered by a pristine Kyber crystal. It ignores non-magical resistance to slashing damage. On a critical hit (rolling a 20), the immense heat instantly cauterizes as it completely severs one of the target's limbs, or instantly destroys non-boss droids." },
-        
-        // --- RANGED WEAPONS ---
-        { cat: "Ranged", dnd: "Dart", sw: "Throwing Knives", dmg: "1d4 Piercing", props: "Finesse, Thrown (20/60)", weight: "0.25 lb", cost: "5 cr", desc: "Balanced blades for throwing.", fullDesc: "Perfectly balanced throwing knives, often magnetically sealed to stick to armor. A favorite of stealth operatives." },
-        { cat: "Ranged", dnd: "Hand Crossbow", sw: "Hold-out Blaster", dmg: "1d6 Energy", props: "Ammunition (30/120), Light", weight: "3 lb", cost: "75 cr", desc: "Range 30/120. Concealable, perfect for dual-wielding Scoundrels.", fullDesc: "A miniature blaster pistol designed for concealment. It packs less of a punch than standard military gear but can be fired rapidly with one hand. Ideal for 'shooting first'." },
-        { cat: "Ranged", dnd: "Shortbow", sw: "Blaster Pistol", dmg: "1d6 Energy", props: "Ammunition (80/320), Two-Handed", weight: "2 lb", cost: "250 cr", desc: "Range 80/320. Reliable sidearm. Standard issue for Rebel officers.", fullDesc: "The ubiquitous DL-44 or similar standard blaster pistol. Highly reliable, easy to maintain, and effective at medium range. The standard sidearm for officers and smugglers." },
-        { cat: "Ranged", dnd: "Light Crossbow", sw: "Blaster Carbine", dmg: "1d8 Energy", props: "Ammunition (80/320), Two-Handed", weight: "5 lb", cost: "500 cr", desc: "Range 80/320. Compact, rapid-fire military rifle used by Stormtroopers.", fullDesc: "A compact version of a heavy blaster rifle, sacrificing extreme range for mobility. The E-11 carbine is the standard issue for Imperial Stormtroopers." },
-        { cat: "Ranged", dnd: "Longbow", sw: "Heavy Blaster Rifle", dmg: "1d8 Energy", props: "Ammunition (150/600), Heavy, Two-Handed", weight: "2 lb", cost: "500 cr", desc: "Range 150/600. Heavy, powerful, requires two hands. Used by snipers.", fullDesc: "A long-barreled blaster rifle designed for extreme range and precision. It fires a highly concentrated bolt of plasma. Due to its length and recoil, it requires two hands." },
-        { cat: "Ranged", dnd: "Heavy Crossbow", sw: "Bowcaster", dmg: "1d10 Energy", props: "Ammunition (100/400), Heavy, Loading", weight: "18 lb", cost: "800 cr", desc: "Range 100/400. Heavy, Loading. Wookiee weapon firing magnetic quarrels.", fullDesc: "A traditional Wookiee weapon that uses magnetic acceleration to fire explosive quarrels wrapped in plasma energy. Incredibly heavy and possesses massive recoil." },
-        { cat: "Ranged", dnd: "", sw: "Ion Blaster", dmg: "1d8 Lightning", props: "Ammunition (80/320)", weight: "3 lb", cost: "400 cr", desc: "Fires localized EMP blasts. Highly effective against Droids.", fullDesc: "A specialized blaster that fires ionized particles instead of standard plasma. It deals lightning damage. If the target is a Droid or Construct, it must succeed on a DC 13 Constitution save or suffer disadvantage on its next attack." },
-        { cat: "Ranged", dnd: "", sw: "Disruptor Rifle", dmg: "1d12 Necrotic", props: "Ammunition (150/600), Heavy, Loading", weight: "10 lb", cost: "3,000 cr", desc: "Illegal, highly lethal weapon that disintegrates matter.", fullDesc: "A universally banned weapon that tears matter apart at the molecular level. It ignores temporary hit points. If a creature is reduced to 0 hit points by this weapon, it is completely disintegrated." },
-        { cat: "Ranged", dnd: "", sw: "Light Repeating Blaster", dmg: "1d8 Energy", props: "Ammunition (80/320), Heavy, Two-Handed", weight: "15 lb", cost: "1,200 cr", desc: "Suppression weapon with an incredible rate of fire.", fullDesc: "A squad automatic weapon. As an action, you can target a 10-foot cube within normal range. Each creature in the area must succeed on a DC 13 Dexterity saving throw or take standard weapon damage." },
+    let items = spellData.slice();
 
-        // --- EXPLOSIVES ---
-        { cat: "Explosives", dnd: "Javelin", sw: "Frag Grenade", dmg: "1d6 Piercing", props: "Thrown (30/120)", weight: "1 lb", cost: "50 cr", desc: "Thrown 30/120. Standard anti-personnel shrapnel charge.", fullDesc: "A standard military fragmentation grenade. You can throw it at a target, treating it as a ranged weapon attack. Upon impact, it detonates into lethal shrapnel." },
-        { cat: "Explosives", dnd: "Alchemist's Fire", sw: "Incendiary Charge", dmg: "1d4 Fire/turn", props: "Thrown (20)", weight: "1 lb", cost: "500 cr", desc: "Covers target in burning chemical gel. Requires an action to extinguish.", fullDesc: "A flask containing a highly volatile chemical gel that ignites upon exposure to air. On a hit, the target takes 1d4 fire damage at the start of each of its turns until extinguished." },
-        { cat: "Explosives", dnd: "Holy Water", sw: "Ion Grenade", dmg: "2d6 Radiant", props: "Thrown (20)", weight: "1 lb", cost: "250 cr", desc: "Specifically designed to scramble circuitry and overload droid combat frames.", fullDesc: "An explosive charge that releases a massive pulse of ionic energy rather than shrapnel. If the target is a Droid, it takes 2d6 radiant (ionic) damage. Harmless to organics." },
-        { cat: "Explosives", dnd: "", sw: "Thermal Detonator", dmg: "3d6 Fire/Force", props: "Thrown (20/60)", weight: "1 lb", cost: "1,500 cr", desc: "Military-grade thermobaric explosive.", fullDesc: "A highly restricted explosive that triggers a localized fusion reaction. Destroys anything in a 10-foot radius. High chance of disintegrating cover. Each creature in radius must make a DC 13 Dex save." },
-        { cat: "Explosives", dnd: "Poison Gas (Basic)", sw: "Dioxis Grenade", dmg: "1d4 Poison/turn", props: "Thrown (30/90)", weight: "1 lb", cost: "400 cr", desc: "Releases a 15-foot cloud of highly toxic green gas.", fullDesc: "Releases a dense, green toxic gas in a 15-foot radius. The area is heavily obscured. Any breathing creature that starts its turn in the cloud takes 1d4 poison damage and must make a DC 12 Con save or be Poisoned." },
-        { cat: "Explosives", dnd: "", sw: "Stun Grenade (Flashbang)", dmg: "Status Effect", props: "Thrown (30/90)", weight: "1 lb", cost: "300 cr", desc: "Non-lethal sonic and photic overload.", fullDesc: "Detonates with blinding light and deafening sound in a 10-foot radius. Creatures in the area must succeed on a DC 13 Constitution save or be Blinded and Deafened until the end of their next turn." },
-
-        // --- ARMOR ---
-        { cat: "Armor", dnd: "Padded", sw: "Blast Vest", dmg: "11 + Dex", props: "Light Armor, Disadv. Stealth", weight: "8 lb", cost: "50 cr", desc: "Cheap, bulky padding worn over civilian clothes.", fullDesc: "A heavy, insulated vest providing minimal protection against shrapnel and glancing blaster shots. Its bulk makes it hard to move silently." },
-        { cat: "Armor", dnd: "Leather", sw: "Smuggler Jacket", dmg: "11 + Dex", props: "Light Armor", weight: "10 lb", cost: "100 cr", desc: "Thick, blast-resistant fabrics favored in the Outer Rim.", fullDesc: "A classic spacer's jacket tailored from thick, blast-resistant synthetic fabrics. It provides minimal protection but allows for complete freedom of movement." },
-        { cat: "Armor", dnd: "Studded Leather", sw: "Combat Weave", dmg: "12 + Dex", props: "Light Armor", weight: "13 lb", cost: "450 cr", desc: "Reinforced synthetic weave with micro-plating.", fullDesc: "Flexible armor featuring tiny micro-plates of durasteel sewn directly into a mesh bodysuit. Offers superior light protection for agile fighters." },
-        { cat: "Armor", dnd: "Chain Shirt", sw: "Armored Flight Suit", dmg: "13 + Dex (Max 2)", props: "Medium Armor", weight: "20 lb", cost: "500 cr", desc: "Standard pilot gear with integrated impact plates.", fullDesc: "A pressurized flight suit reinforced with impact-dispersing gel and plasteel plates across the vital organs. Standard issue for starfighter squadrons." },
-        { cat: "Armor", dnd: "Breastplate", sw: "Trooper Plasteel", dmg: "14 + Dex (Max 2)", props: "Medium Armor", weight: "20 lb", cost: "4,000 cr", desc: "Heavy chest piece allowing for unhindered tactical movement.", fullDesc: "A molded plasteel chest plate worn over a flexible body glove. This is the core component of standard military armor. Offers high protection for vital organs." },
-        { cat: "Armor", dnd: "Half Plate", sw: "Assault Armor", dmg: "15 + Dex (Max 2)", props: "Medium Armor, Disadv. Stealth", weight: "40 lb", cost: "7,500 cr", desc: "Heavy plating protecting the torso, joints, and shins.", fullDesc: "Used by heavy infantry and shock troopers. Interlocking plasteel plates cover the majority of the body, restricting movement but offering excellent medium-tier defense." },
-        { cat: "Armor", dnd: "Splint", sw: "Heavy Plasteel", dmg: "17 AC", props: "Heavy Armor, Disadv. Stealth", weight: "60 lb", cost: "2,000 cr", desc: "Bulky, overlapping strips of durasteel.", fullDesc: "An older, bulkier style of heavy armor. Overlapping strips of heavy metal are riveted to a heavy undersuit. Exceptionally noisy and heavy, but highly protective." },
-        { cat: "Armor", dnd: "Plate", sw: "Heavy Mandalorian Beskar", dmg: "18 AC", props: "Heavy Armor, Disadv. Stealth", weight: "65 lb", cost: "15,000 cr", desc: "Full environmental seal, heavy plating. Disadvantage on Stealth.", fullDesc: "The pinnacle of personal defense. Interlocking plates of heavy durasteel or rare Beskar cover the entire body. Includes a fully sealed helmet and environmental systems." },
-        { cat: "Armor", dnd: "Shield", sw: "Energy Shield / Riot Shield", dmg: "+2 AC", props: "Shield", weight: "6 lb", cost: "100 cr", desc: "Wrist-mounted deflector screen or Imperial heavy riot plasteel.", fullDesc: "Can be flavored as a heavy, transparent plasteel riot shield or a high-tech, wrist-mounted emitter that projects a localized energy deflector screen." },
-        { cat: "Armor", dnd: "", sw: "Personal Deflector Shield", dmg: "Temp HP", props: "Belt", weight: "2 lb", cost: "5,000 cr", desc: "Energy shield belt granting Temporary Hit Points.", fullDesc: "A specialized, rechargeable shield generator worn on a belt. As a bonus action, activate to gain 10 temporary hit points. Requires a short rest to recharge its power cell." },
-        { cat: "Armor", dnd: "Cloak of Protection", sw: "Shadowsilk Cloak", dmg: "+1 AC / +1 Saves", props: "Wondrous Item", weight: "1 lb", cost: "Rare", desc: "A cloak woven from sensor-baffling exotic materials.", fullDesc: "A rare cloak that subtly refracts light and scrambles basic targeting sensors. It grants a +1 bonus to AC and saving throws while worn." },
-
-        // --- GEAR ---
-        { cat: "Gear", dnd: "Potion of Healing", sw: "Bacta Stim", dmg: "2d4+2 HP", props: "Consumable", weight: "0.5 lb", cost: "500 cr", desc: "Injector pen that rapidly accelerates cellular repair.", fullDesc: "A pressurized auto-injector filled with refined Bacta fluid. Using an action to administer the stim rapidly accelerates cellular regeneration, healing 2d4 + 2 HP instantly." },
-        { cat: "Gear", dnd: "Healer's Kit", sw: "Medpac", dmg: "Stabilize", props: "10 Uses", weight: "3 lb", cost: "500 cr", desc: "A comprehensive medical kit for field triage.", fullDesc: "Contains bandages, synth-flesh, cauterizers, and minor stimulants. As an action, you can expend one use of the kit to stabilize a creature that has 0 hit points, without needing to make a Wisdom (Medicine) check." },
-        { cat: "Gear", dnd: "Thieves' Tools", sw: "Slicer Kit", dmg: "Tool", props: "Tool", weight: "1 lb", cost: "250 cr", desc: "Datapads and security spikes used to bypass blast doors and terminals.", fullDesc: "A specialized kit containing micro-datapads, custom encryption spikes, and localized EMP emitters. Proficiency allows adding your bonus to hack electronic locks or terminals." },
-        { cat: "Gear", dnd: "Crowbar", sw: "Fusion Cutter", dmg: "Tool", props: "Tool / Improvised Weapon", weight: "5 lb", cost: "20 cr", desc: "A heavy industrial cutting torch.", fullDesc: "Used to cut through bulkheads and wreckage. Grants advantage on Strength checks where the cutter's intense heat or leverage can be applied." },
-        { cat: "Gear", dnd: "Torch", sw: "Glowrod", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "10 cr", desc: "Provides bright light in a 20-foot radius.", fullDesc: "A standard, battery-operated illumination device. It casts bright light in a 20-foot radius and dim light for an additional 20 feet. Lasts for hundreds of hours on a single charge." },
-        { cat: "Gear", dnd: "Caltrops", sw: "Mag-Caltrops", dmg: "Hazard", props: "Equipment", weight: "2 lb", cost: "50 cr", desc: "Magnetic spikes that adhere to boots or droid treads.", fullDesc: "As an action, you can spread a bag of mag-caltrops over a 5-foot-square area. Any creature moving through the area must succeed on a DC 15 Dexterity save or stop moving and take 1 piercing damage." },
-        { cat: "Gear", dnd: "Rope, Hempen", sw: "Fibercord Grapple", dmg: "Tool", props: "Equipment", weight: "10 lb", cost: "10 cr", desc: "50 feet of ultra-thin, high-tensile fibercord with a magnetic grapnel.", fullDesc: "A spool containing 50 feet of ultra-thin, incredibly strong synthetic fibercord capped with a magnetic grappling hook." },
-        { cat: "Gear", dnd: "Breathing Gear", sw: "Roamer-6 Breath Mask", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "200 cr", desc: "Filters toxic gases and allows underwater breathing.", fullDesc: "A compact rebreather mask that covers the nose and mouth. It filters out common atmospheric toxins (granting advantage against poison gas) and holds a 2-hour supply of oxygen for aquatic use." },
-        { cat: "Gear", dnd: "Rations (1 Day)", sw: "Ration Pack", dmg: "Consumable", props: "Equipment", weight: "2 lb", cost: "5 cr", desc: "High-calorie protein paste and purified water.", fullDesc: "A vacuum-sealed pack of condensed protein cubes, nutritional paste, and a self-heating element. Tastes terrible, but sustains you for one full day." },
-        { cat: "Gear", dnd: "Broom of Flying", sw: "Z-6 Jetpack", dmg: "Mobility", props: "Equipment / Fuel", weight: "20 lb", cost: "5,000 cr", desc: "Provides a flying speed of 50 feet.", fullDesc: "A Mandalorian-style or bounty hunter jetpack. As an action, you can activate the thrusters. It provides a flying speed of 50 feet. It carries enough fuel for 1 hour of continuous flight." },
-        { cat: "Gear", dnd: "", sw: "Comlink", dmg: "Tool", props: "Equipment", weight: "0.1 lb", cost: "25 cr", desc: "Standard handheld/wrist communication device.", fullDesc: "A standard communications transceiver. Models range from handheld cylinders to wrist-mounted or helmet-integrated arrays. Works seamlessly within planetary range or in orbit." },
-        { cat: "Gear", dnd: "Spyglass", sw: "Electrobinoculars", dmg: "Tool", props: "Equipment", weight: "1 lb", cost: "100 cr", desc: "Advanced long-range optics with overlays.", fullDesc: "Handheld optical device. Grants advantage on Wisdom (Perception) checks relying on sight at long range. Includes night-vision, distance readout, and thermal overlays." },
-        { cat: "Gear", dnd: "Sending Stones", sw: "Holocomm Projector", dmg: "Communication", props: "Wondrous Item", weight: "0.5 lb", cost: "Rare", desc: "Allows a brief, real-time holographic conversation.", fullDesc: "A paired set of portable holographic projectors. You can use an action to project a real-time, blue-tinted hologram to the paired device, allowing a conversation of up to 5 minutes anywhere in the galaxy." }
-    ];
-
-    const classCodeMap = { Sorcerer:"Sor", Wizard:"Wiz", Cleric:"Clr", Druid:"Drd", Bard:"Brd", Paladin:"Pal", Ranger:"Rng", Artificer:"Art", Warlock:"War", Fighter:"Wiz", Rogue:"Wiz", Monk:null };
-
-    function maxSpellLevel(cls, lvl) {
-        if (!cls || !lvl) return -1;
-        const full = (l) => l>=17?9 : l>=15?8 : l>=13?7 : l>=11?6 : l>=9?5 : l>=7?4 : l>=5?3 : l>=3?2 : 1;
-        const half = (l) => l>=17?5 : l>=13?4 : l>=9?3 : l>=5?2 : l>=2?1 : 0;
-        const third = (l) => l>=19?4 : l>=13?3 : l>=7?2 : l>=3?1 : 0;
-        const warlock = (l) => l>=9?5 : l>=7?4 : l>=5?3 : l>=3?2 : 1;
-        switch (cls) {
-            case "Sorcerer": case "Wizard": case "Cleric": case "Druid": case "Bard": return full(lvl);
-            case "Paladin": case "Ranger": case "Artificer": return Math.max(half(lvl), cls==="Artificer"?(lvl>=2?1:0):0);
-            case "Warlock": return warlock(lvl);
-            case "Fighter": case "Rogue": return third(lvl); 
-            case "Monk": return 0;
-            default: return 0;
-        }
-    }
-
-    const spellData = [
-        { lvl: "Cantrip", dnd: "Fire Bolt", sw: "Force Combustion", classes: ["Sor", "Wiz", "Art"], cast: "1 Action", range: "120 ft", dur: "Instantaneous", comp: "Somatic", desc: "1d10 Fire. Agitate molecules in the air through the Force until they violently ignite.", fullDesc: "You channel the Force to hyper-agitate molecules at a distant point, causing a sudden, violent combustion. Make a ranged spell attack against the target. On a hit, the target takes 1d10 fire damage." },
-        { lvl: "Cantrip", dnd: "Mage Hand", sw: "Force Pull/Push (Minor)", classes: ["Sor", "Wiz", "Brd", "War"], cast: "1 Action", range: "30 ft", dur: "1 Minute", comp: "Somatic", desc: "Telekinetically manipulate small objects up to 30ft away.", fullDesc: "You create an invisible, telekinetic grip at a point you choose within range. You can use your action to manipulate an object, open an unlocked door, or retrieve an item. Can't carry more than 10 lbs." },
-        { lvl: "Cantrip", dnd: "Ray of Frost", sw: "Force Chill / Cryo", classes: ["Sor", "Wiz", "Art"], cast: "1 Action", range: "60 ft", dur: "Instantaneous", comp: "Somatic", desc: "1d8 Cold, slows movement. Drain thermal energy via the dark side.", fullDesc: "You draw the thermal energy out of a target using the dark side of the Force. Make a ranged spell attack. On a hit, it takes 1d8 cold damage, and its speed is reduced by 10 feet until the start of your next turn." },
-        { lvl: "Cantrip", dnd: "Vicious Mockery", sw: "Mind Trick (Doubt)", classes: ["Brd"], cast: "1 Action", range: "60 ft", dur: "Instantaneous", comp: "Verbal", desc: "1d4 Psychic, Disadv. Plant deep fear directly into a weak mind.", fullDesc: "You unleash a string of words laced with subtle Force compulsion, planting deep doubt. Wisdom saving throw or take 1d4 psychic damage and have disadvantage on the next attack roll it makes." },
-        { lvl: "Cantrip", dnd: "Eldritch Blast", sw: "Focused Force Push", classes: ["War"], cast: "1 Action", range: "120 ft", dur: "Instantaneous", comp: "Somatic", desc: "1d10 Force. Unerring telekinetic blasts. Multiple beams = rapid combo strikes.", fullDesc: "You hurl a concentrated, invisible beam of pure kinetic Force energy. Make a ranged spell attack. On a hit, the target takes 1d10 force damage. The spell creates more beams at higher levels." },
-        { lvl: "Cantrip", dnd: "Shocking Grasp", sw: "Minor Force Lightning", classes: ["Sor", "Wiz", "Art"], cast: "1 Action", range: "Touch", dur: "Instantaneous", comp: "Somatic", desc: "1d8 Lightning. Prevents reactions. Short-circuit a droid.", fullDesc: "Lightning arcs from your fingertips. Make a melee spell attack against a target. You have advantage if the target is wearing metal (or is a Droid). On a hit, 1d8 lightning damage, and it can't take reactions." },
-        { lvl: "Cantrip", dnd: "Guidance", sw: "Force Premonition", classes: ["Clr", "Drd", "Art"], cast: "1 Action", range: "Touch", dur: "Concentration, 1 min", comp: "Somatic", desc: "Add 1d4 to a check. Briefly glimpse the immediate future.", fullDesc: "You touch one willing creature and grant them a brief flash of foresight through the Force. Once before the spell ends, the target can roll a d4 and add the number rolled to one ability check." },
-        { lvl: "Cantrip", dnd: "Sacred Flame", sw: "Force Judgment", classes: ["Clr"], cast: "1 Action", range: "60 ft", dur: "Instantaneous", comp: "Verbal, Somatic", desc: "1d8 Radiant, ignores cover. A righteous burst of Light Side energy.", fullDesc: "Flame-like radiance descends on a creature that you can see within range. The target must succeed on a Dexterity saving throw or take 1d8 radiant damage. The target gains no benefit from cover for this saving throw." },
-        { lvl: "Cantrip", dnd: "Mending", sw: "Tech Repair", classes: ["Brd", "Clr", "Drd", "Sor", "Wiz", "Art"], cast: "1 Minute", range: "Touch", dur: "Instantaneous", comp: "Verbal, Somatic", desc: "Restore a single break or tear. Field repair on damaged equipment.", fullDesc: "This spell repairs a single break or tear in an object you touch, such as a broken commlink, a torn flight suit, or a leaking power cell. As long as the break or tear is no larger than 1 foot in any dimension, you mend it, leaving no trace of the former damage." },
-        
-        { lvl: "1st", dnd: "Magic Missile", sw: "Force Barrage", classes: ["Sor", "Wiz"], cast: "1 Action", range: "120 ft", dur: "Instantaneous", comp: "Somatic", desc: "3 darts, 1d4+1 Force. Unerring, rapid telekinetic strikes.", fullDesc: "You create three glowing darts of pure telekinetic Force energy. Each dart hits a creature of your choice. A dart deals 1d4 + 1 force damage. The darts all strike simultaneously, and automatically hit." },
-        { lvl: "1st", dnd: "Shield", sw: "Force Barrier / Deflector", classes: ["Sor", "Wiz", "War"], cast: "1 Reaction", range: "Self", dur: "1 Round", comp: "Somatic", desc: "+5 AC reaction. Form a localized telekinetic wall to block incoming blaster bolts.", fullDesc: "An invisible barrier of Force energy appears and protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from Magic Missile." },
-        { lvl: "1st", dnd: "Cure Wounds", sw: "Force Heal", classes: ["Brd", "Clr", "Drd", "Pal", "Rng", "Art"], cast: "1 Action", range: "Touch", dur: "Instantaneous", comp: "Somatic", desc: "1d8 + Mod Healing. Channel the living Force to rapidly knit flesh and bone together.", fullDesc: "A creature you touch regains a number of hit points equal to 1d8 + your spellcasting ability modifier. This healing has no effect on undead or Droids." },
-        { lvl: "1st", dnd: "Healing Word", sw: "Force Revitalize", classes: ["Brd", "Clr", "Drd"], cast: "1 Bonus Action", range: "60 ft", dur: "Instantaneous", comp: "Verbal", desc: "1d4 + Mod. A surge of Force energy across the battlefield.", fullDesc: "A creature of your choice that you can see within range regains hit points equal to 1d4 + your spellcasting ability modifier." },
-        { lvl: "1st", dnd: "Thunderwave", sw: "Force Repulse", classes: ["Brd", "Drd", "Sor", "Wiz"], cast: "1 Action", range: "Self (15ft cube)", dur: "Instantaneous", comp: "Somatic", desc: "2d8 Thunder. 15ft cube. A violent, outward telekinetic burst throwing enemies back.", fullDesc: "A wave of violent kinetic Force sweeps out from you. Each creature in a 15-foot cube must make a Constitution saving throw. On a failed save, takes 2d8 thunder (bludgeoning) damage and is pushed 10 feet." },
-        { lvl: "1st", dnd: "Charm Person", sw: "Jedi Mind Trick", classes: ["Brd", "Drd", "Sor", "Wiz", "War"], cast: "1 Action", range: "30 ft", dur: "1 Hour", comp: "Somatic, Verbal", desc: "Wis save. Target treats you as friendly. 'These aren't the droids you're looking for.'", fullDesc: "You wave your hand and speak a subtle command. Attempt to charm a humanoid you can see. Wisdom saving throw. If it fails, it is charmed by you until the spell ends, treating you as a friendly acquaintance." },
-        { lvl: "1st", dnd: "Hunter's Mark", sw: "Bounty Tracker HUD", classes: ["Rng"], cast: "1 Bonus Action", range: "90 ft", dur: "Concentration, 1 hr", comp: "None", desc: "Bonus Action. Deal extra 1d6 damage to target. Thermal tracking lock-on.", fullDesc: "You lock onto a target using your helmet's HUD or a planted micro-tracker. You deal an extra 1d6 damage to the target whenever you hit it with a weapon attack, and have advantage on Survival/Perception to find it." },
-        { lvl: "1st", dnd: "Command", sw: "Dominate Mind", classes: ["Clr", "Pal", "Brd", "War"], cast: "1 Action", range: "60 ft", dur: "1 Round", comp: "Verbal", desc: "One-word command they must obey. Pure Force compulsion.", fullDesc: "You speak a one-word command to a creature you can see within range. The target must succeed on a Wisdom saving throw or follow the command on its next turn." },
-        { lvl: "1st", dnd: "Bless", sw: "Battle Meditation (Minor)", classes: ["Clr", "Pal"], cast: "1 Action", range: "30 ft", dur: "Concentration, up to 1 minute", comp: "Verbal, Somatic", desc: "+1d4 to attacks/saves for 3 allies. Aura of Force confidence.", fullDesc: "You bless up to three creatures of your choice within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target can roll a d4 and add the number rolled to the attack roll or saving throw." },
-        { lvl: "1st", dnd: "Burning Hands", sw: "Flamethrower Burst", classes: ["Sor", "Wiz"], cast: "1 Action", range: "Self (15ft cone)", dur: "Instantaneous", comp: "Verbal, Somatic", desc: "3d6 Fire. 15 ft cone. Wrist-mounted flame projector.", fullDesc: "As you hold your hands with thumbs touching and fingers spread, a thin sheet of flames shoots forth from your outstretched fingertips. Each creature in a 15-foot cone must make a Dexterity saving throw. A creature takes 3d6 fire damage on a failed save, or half as much damage on a successful one." },
-        
-        { lvl: "2nd", dnd: "Hold Person", sw: "Force Stasis / Choke", classes: ["Brd", "Clr", "Drd", "Sor", "Wiz", "War"], cast: "1 Action", range: "60 ft", dur: "Concentration, 1 min", comp: "Somatic", desc: "Wis save. Paralyzes humanoid. Grip them in an invisible, telekinetic hold they cannot break.", fullDesc: "You reach out and clench your fist, trapping a humanoid within range in a crushing telekinetic grip. The target must succeed on a Wisdom saving throw or be paralyzed for the duration." },
-        { lvl: "2nd", dnd: "Invisibility", sw: "Force Cloak / Stealth Field", classes: ["Brd", "Sor", "Wiz", "Art", "War"], cast: "1 Action", range: "Touch", dur: "Concentration, 1 hr", comp: "Somatic", desc: "Target becomes invisible. Cloud the minds of observers, or activate a light-bending belt.", fullDesc: "A creature you touch becomes invisible until the spell ends. The spell ends for a target that attacks or casts a spell." },
-        { lvl: "2nd", dnd: "Scorching Ray", sw: "Force Rend / Flamethrower", classes: ["Sor", "Wiz"], cast: "1 Action", range: "120 ft", dur: "Instantaneous", comp: "Somatic", desc: "3 rays, 2d6 Fire each. Telekinetically tear at targets or sweep a Mandalorian flamethrower.", fullDesc: "You create three arcs of lethal Force energy (or bursts of flame). Make a ranged spell attack for each ray. On a hit, the target takes 2d6 fire (or slashing/kinetic) damage." },
-        { lvl: "2nd", dnd: "Shatter", sw: "Force Crush / Thermal Imploder", classes: ["Brd", "Sor", "Wiz", "War"], cast: "1 Action", range: "60 ft", dur: "Instantaneous", comp: "Somatic", desc: "3d8 Thunder. 10ft radius. Crippling localized crush.", fullDesc: "A sudden loud ringing noise, painfully intense, erupts from a point of your choice within range. Each creature in a 10-foot-radius sphere must make a Constitution saving throw. A creature takes 3d8 thunder damage on a failed save." },
-        { lvl: "2nd", dnd: "Misty Step", sw: "Force Dash", classes: ["Sor", "Wiz", "War"], cast: "1 Bonus Action", range: "Self", dur: "Instantaneous", comp: "Somatic", desc: "Bonus action teleport 30ft. Move faster than the eye can track.", fullDesc: "Briefly surround yourself in a blur of Force speed, teleporting up to 30 feet to an unoccupied space that you can see." },
-        { lvl: "2nd", dnd: "Spiritual Weapon", sw: "Telekinetic Lightsaber", classes: ["Clr"], cast: "1 Bonus Action", range: "60 ft", dur: "1 Minute", comp: "Somatic", desc: "Bonus action. 1d8+Mod Force. A floating saber swinging telekinetically.", fullDesc: "You ignite a secondary, floating lightsaber that hovers within range. You can make a melee spell attack against a creature within 5 feet. On a hit, takes force damage equal to 1d8 + your spellcasting ability modifier." },
-        { lvl: "2nd", dnd: "Blur", sw: "Force Speed Cloud", classes: ["Sor", "Wiz", "Art"], cast: "1 Action", range: "Self", dur: "Concentration, up to 1 minute", comp: "Verbal", desc: "Disadvantage on attacks vs you. Move so fast your outline blurs.", fullDesc: "Your body becomes blurred, shifting and wavering to all who can see you. For the duration, any creature has disadvantage on attack rolls against you. An attacker is immune to this effect if it doesn't rely on sight, as with blindsight, or can see through illusions, as with truesight." },
-        { lvl: "2nd", dnd: "Heat Metal", sw: "Armor Overheat", classes: ["Brd", "Drd", "Art"], cast: "1 Action", range: "60 ft", dur: "Concentration, up to 1 minute", comp: "Verbal, Somatic, Material", desc: "2d8 Fire/turn. Drop or burn. Remote-overload power cell or Force-heat plasteel.", fullDesc: "Choose a manufactured metal object, such as a metal weapon or a suit of heavy or medium metal armor, that you can see within range. You cause the object to glow red-hot. Any creature in physical contact with the object takes 2d8 fire damage when you cast the spell. Until the spell ends, you can use a bonus action on each of your subsequent turns to cause this damage again." },
-        { lvl: "2nd", dnd: "", sw: "Sith Alchemy / Drain", classes: ["Sor", "Wiz", "War"], cast: "1 Action", range: "30 ft", dur: "Instantaneous", comp: "Somatic", desc: "Star Wars exclusive. Drain life force to heal yourself.", fullDesc: "You channel the dark side to rip the life force from a target. Target makes a Constitution saving throw, taking 3d6 necrotic damage on a failure, and you heal for half the damage dealt." },
-        
-        { lvl: "3rd", dnd: "Fireball", sw: "Force Storm / Heavy Detonator", classes: ["Sor", "Wiz"], cast: "1 Action", range: "150 ft", dur: "Instantaneous", comp: "Somatic", desc: "8d6 Fire. 20ft radius. Massive telekinetic devastation, or military-grade explosive.", fullDesc: "You hurl a compressed ball of volatile energy. Each creature in a 20-foot-radius sphere must make a Dexterity saving throw. A target takes 8d6 fire damage on a failed save, or half as much damage on a successful one." },
-        { lvl: "3rd", dnd: "Fly", sw: "Force Levitation / Jetpack", classes: ["Sor", "Wiz", "Art", "War"], cast: "1 Action", range: "Touch", dur: "Concentration, 10 min", comp: "Somatic", desc: "60ft fly speed. Defy gravity through pure Force, or ignite your Z-6 Jetpack.", fullDesc: "You touch a willing creature. The target gains a flying speed of 60 feet for the duration." },
-        { lvl: "3rd", dnd: "Haste", sw: "Battle Meditation / Speed", classes: ["Sor", "Wiz", "Art"], cast: "1 Action", range: "30 ft", dur: "Concentration, 1 min", comp: "Somatic", desc: "Doubles speed, +2 AC, extra action. Tap deeply into the combat flow.", fullDesc: "Until the spell ends, the target's speed is doubled, it gains a +2 bonus to AC, it has advantage on Dexterity saving throws, and it gains an additional action on each of its turns." },
-        { lvl: "3rd", dnd: "Counterspell", sw: "Force Absorb / Deflection", classes: ["Sor", "Wiz", "War"], cast: "1 Reaction", range: "60 ft", dur: "Instantaneous", comp: "Somatic", desc: "Reaction. Interrupt cast. Catching raw Force energy or telekinetically crushing a detonator.", fullDesc: "You attempt to interrupt a creature in the process of casting a spell. If the creature is casting a spell of 3rd level or lower, its spell fails." },
-        { lvl: "3rd", dnd: "Lightning Bolt", sw: "Sith Lightning", classes: ["Sor", "Wiz"], cast: "1 Action", range: "Self (100ft line)", dur: "Instantaneous", comp: "Somatic", desc: "8d6 Lightning. 100ft line. Unleash the pure, hateful energy of the dark side.", fullDesc: "A stroke of dark side lightning forming a line 100 feet long and 5 feet wide blasts out from you. Each creature in the line must make a Dexterity saving throw." },
-        { lvl: "3rd", dnd: "Dispel Magic", sw: "Force Sever / Slice Override", classes: ["Brd", "Clr", "Drd", "Pal", "Sor", "Wiz", "War", "Art"], cast: "1 Action", range: "120 ft", dur: "Instantaneous", comp: "Somatic", desc: "End ongoing effects. Cut a target off from the Force, or reboot a system.", fullDesc: "Choose one creature, object, or magical effect within range. Any spell of 3rd level or lower on the target ends." },
-        { lvl: "3rd", dnd: "Revivify", sw: "Bacta Tank Field Module", classes: ["Clr", "Pal", "Rng", "Art"], cast: "1 Action", range: "Touch", dur: "Instantaneous", comp: "Verbal, Somatic, Material", desc: "Return creature dead ≤1 min to 1 HP. Emergency cardiac shock + bacta flush.", fullDesc: "You touch a creature that has died within the last minute. That creature returns to life with 1 hit point. This spell can't return to life a creature that has died of old age, nor can it restore any missing body parts." },
-        { lvl: "3rd", dnd: "Slow", sw: "Force Drag", classes: ["Sor", "Wiz"], cast: "1 Action", range: "120 ft", dur: "Concentration, up to 1 minute", comp: "Verbal, Somatic, Material", desc: "6 creatures, halved speed and one action only. Crush them under telekinetic weight.", fullDesc: "You alter time around up to six creatures of your choice in a 40-foot cube within range. Each target must succeed on a Wisdom saving throw or be affected by this spell for the duration. An affected target's speed is halved, it takes a −2 penalty to AC and Dexterity saving throws, and it can't use reactions." },
-
-        { lvl: "4th", dnd: "Wall of Fire", sw: "Plasma Barrier", classes: ["Drd", "Sor", "Wiz"], cast: "1 Action", range: "120 ft", dur: "Concentration, 1 min", comp: "Verbal, Somatic, Material", desc: "5d8 Fire. 60 ft wall. Force-channeled fire wall or deployed plasma emitter.", fullDesc: "You create a wall of fire (plasma) on a solid surface. When the wall appears, each creature in its area takes 5d8 fire damage on a failed Dex save, or half as much on a successful one." },
-        { lvl: "4th", dnd: "Polymorph", sw: "Beast Bond Transformation", classes: ["Brd", "Drd", "Sor", "Wiz"], cast: "1 Action", range: "60 ft", dur: "Concentration, 1 hr", comp: "Verbal, Somatic, Material", desc: "Transform target into beast. Living-Force consciousness merge or bio-engineering serum.", fullDesc: "This spell transforms a creature that you can see within range into a new form. The transformation lasts for the duration, or until the target drops to 0 hit points or dies." },
-        { lvl: "4th", dnd: "Greater Invisibility", sw: "Phase-Shift Cloak", classes: ["Brd", "Sor", "Wiz"], cast: "1 Action", range: "Touch", dur: "Concentration, 1 min", comp: "Verbal, Somatic", desc: "Invisible while attacking. Advanced light-bending or perfect Force concealment.", fullDesc: "You or a creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person." },
-        { lvl: "4th", dnd: "Banishment", sw: "Force Exile", classes: ["Clr", "Pal", "Sor", "Wiz", "War"], cast: "1 Action", range: "60 ft", dur: "Concentration, 1 min", comp: "Verbal, Somatic, Material", desc: "Send target to another plane. Hurl them through a Force-rift.", fullDesc: "You attempt to send one creature that you can see within range to another plane of existence. The target must succeed on a Charisma saving throw or be banished." },
-        { lvl: "4th", dnd: "Dimension Door", sw: "Force Phase", classes: ["Brd", "Sor", "Wiz", "War"], cast: "1 Action", range: "500 ft", dur: "Instantaneous", comp: "Verbal", desc: "Teleport 500 ft + 1 ally. Briefly slip into the Force itself.", fullDesc: "You teleport yourself from your current location to any other spot within range. You arrive at exactly the spot desired. You can bring one willing creature." },
-        
-        { lvl: "5th", dnd: "Cone of Cold", sw: "Cryo-Detonator Wave", classes: ["Sor", "Wiz"], cast: "1 Action", range: "Self (60ft cone)", dur: "Instantaneous", comp: "Verbal, Somatic, Material", desc: "8d8 Cold. 60 ft cone. Mass thermal drain through the dark side.", fullDesc: "A blast of cold air erupts from your hands. Each creature in a 60-foot cone must make a Constitution saving throw. A creature takes 8d8 cold damage on a failed save, or half as much on a successful one." },
-        { lvl: "5th", dnd: "Hold Monster", sw: "Force Stasis (Greater)", classes: ["Brd", "Sor", "Wiz", "War"], cast: "1 Action", range: "90 ft", dur: "Concentration, 1 min", comp: "Verbal, Somatic, Material", desc: "Paralyze any creature. The legendary frozen-in-place Force grip.", fullDesc: "Choose a creature that you can see within range. The target must succeed on a Wisdom saving throw or be paralyzed for the duration." },
-        { lvl: "5th", dnd: "Telekinesis", sw: "Force Lift / Crush", classes: ["Sor", "Wiz"], cast: "1 Action", range: "60 ft", dur: "Concentration, 10 min", comp: "Verbal, Somatic", desc: "Move creatures and objects up to 1000 lbs. The Vader treatment.", fullDesc: "You gain the ability to move or manipulate creatures or objects by thought. When you cast the spell, and as your action each round for the duration, you can exert your will on one creature or object." },
-        { lvl: "5th", dnd: "Mass Cure Wounds", sw: "Battlefield Bacta Burst", classes: ["Brd", "Clr", "Drd"], cast: "1 Action", range: "60 ft", dur: "Instantaneous", comp: "Verbal, Somatic", desc: "3d8+Mod healing to 6 creatures. Aerosol bacta cloud or Light wave.", fullDesc: "A wave of healing energy washes out from a point of your choice within range. Choose up to six creatures in a 30-foot-radius sphere centered on that point. Each target regains hit points equal to 3d8 + your spellcasting ability modifier." },
-        { lvl: "5th", dnd: "Dominate Person", sw: "Mind Control (Major)", classes: ["Brd", "Sor", "Wiz", "War"], cast: "1 Action", range: "60 ft", dur: "Concentration, 1 min", comp: "Verbal, Somatic", desc: "Take complete control of a humanoid. Overwhelming Force dominance.", fullDesc: "You attempt to beguile a humanoid that you can see within range. It must succeed on a Wisdom saving throw or be charmed by you for the duration. You have a telepathic link with it as long as the two of you are on the same plane of existence, and can issue direct commands." }
-    ];
-
-    // --- RENDER: PROFILES ---
-    function renderClasses() {
-        const c = document.getElementById('classes-container');
-        c.innerHTML = classData.map((cl, i) => `
-            <div class="data-card p-4 clickable" onclick="openDetails('class', ${i})">
-                <div class="card-header-block mb-2 pr-4">
-                    <h3 class="text-lg font-bold leading-tight display-font glow-text-hud text-hud">${cl.sw}</h3>
-                    <span class="datapad-font text-[10px] text-hud opacity-80 uppercase tracking-widest mt-1 block">5.5e Base: ${cl.dnd}</span>
-                </div>
-                <p class="text-sm text-slate-300 mb-3 card-desc">${cl.desc}</p>
-                <div class="bg-slate-900/50 p-2 rounded border border-slate-800 card-desc">
-                    <span class="text-[10px] uppercase font-bold block mb-1 datapad-font tracking-widest" style="color: var(--hud-deep);">Key Translations</span>
-                    <p class="text-xs text-slate-400 datapad-font">${cl.features}</p>
-                </div>
-            </div>`).join('');
-    }
-
-    // --- RENDER: ARMORY ---
-    function renderArmoryFilters() {
-        const c = document.getElementById('armory-filters');
-        const cats = ["All", "Favorites", ...new Set(armoryData.map(i=>i.cat))];
-        c.innerHTML = cats.map(cat => {
-            const active = (cat === state.armoryCat);
-            const cls = cat==="Favorites" ? `chip chip-fav ${active?'active':''}` : `chip ${active?'active':''}`;
-            return `<button class="${cls}" onclick="setArmoryCat('${cat}')">${cat==="Favorites" ? "★ Saved" : cat}</button>`;
-        }).join('');
-    }
-    
-    function setArmoryCat(cat) { state.armoryCat = cat; saveState(); renderArmoryFilters(); renderArmory(); }
-
-    function renderArmory() {
-        const q = (document.getElementById('search-armory')?.value || '').toLowerCase().trim();
-        const c = document.getElementById('armory-container');
-
-        let items = armoryData.map((item, originalIndex) => ({ ...item, originalIndex }));
-
-        items = items.filter(it => {
-            if (state.armoryCat === "Favorites") {
-                if (!state.favorites.armory.includes(it.originalIndex)) return false;
-            } else if (state.armoryCat !== "All" && it.cat !== state.armoryCat) {
-                return false;
-            }
-            if (!q) return true;
-            return (it.sw + " " + (it.dnd||"") + " " + it.dmg + " " + it.desc).toLowerCase().includes(q);
-        });
-
-        if (items.length === 0) {
-            c.innerHTML = `<div class="text-center p-8 text-slate-500"><p class="datapad-font uppercase tracking-widest text-xs">No matching gear found.</p></div>`;
-            return;
-        }
-
-        let html = '';
-        if (q || state.armoryCat === "Favorites") {
-            items.forEach((it)=> html += armoryCard(it, q));
+    // MINE filter
+    if (state.spellMine && state.cls) {
+        const code = classCodeMap[state.cls];
+        const maxLvl = maxSpellLevel(state.cls, parseInt(state.level)||1);
+        if (state.cls === "Monk" || code === null) {
+            items = []; // Monks don't cast
         } else {
-            const cats = [...new Set(armoryData.map(i=>i.cat))];
-            cats.forEach(cat => {
-                const inCat = items.filter(i=>i.cat===cat);
-                if (inCat.length===0) return;
-                html += `<h3 class="text-hud font-bold uppercase tracking-widest text-sm mb-3 mt-6 pl-1 border-l-2 border-hud">// ${cat}</h3>`;
-                inCat.forEach((it)=> html += armoryCard(it, q));
+            items = items.filter(s => {
+                if (!s.classes.includes(code)) return false;
+                const sl = lvlOrder[s.lvl];
+                return sl <= maxLvl;
             });
         }
-        c.innerHTML = html;
+    } else if (state.spellLevel === "Favorites") {
+        items = items.filter(s => state.favorites[favKey('spell', s.sw)]);
+    } else if (state.spellLevel !== "All") {
+        items = items.filter(s => s.lvl === state.spellLevel);
     }
 
-    function armoryCard(it, q) {
-        const starred = state.favorites.armory.includes(it.originalIndex);
-        const dndEquiv = it.dnd ? `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">5.5e: ${highlight(it.dnd, q)}</span>` : `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">Star Wars Exclusive</span>`;
-        return `
-        <div class="data-card p-3 clickable" onclick="openDetails('armory', ${it.originalIndex})">
-            <button class="fav-btn ${starred?'active':''}" onclick="toggleFavorite(event, 'armory', ${it.originalIndex})" aria-label="Save">
-                <svg width="20" height="20" fill="${starred?'currentColor':'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            </button>
-            <div class="card-header-block pr-8 mb-2">
-                <span class="font-bold text-white text-base block leading-tight display-font">${highlight(it.sw, q)}</span>
-                <div class="card-compact-equiv hidden">
-                    ${dndEquiv}
-                </div>
-                <div class="card-desc">
-                    ${dndEquiv}
-                </div>
+    if (q) {
+        items = items.filter(s => (s.sw+" "+s.dnd+" "+s.desc+" "+s.lvl).toLowerCase().includes(q));
+    }
+
+    // Status line
+    let statusText = "";
+    if (state.spellMine && state.cls) {
+        const maxL = maxSpellLevel(state.cls, parseInt(state.level)||1);
+        if (state.cls === "Monk") {
+            statusText = `// ${state.cls} L${state.level} — channels Ki, no spell list`;
+        } else if (maxL <= 0) {
+            statusText = `// ${state.cls} L${state.level} — cantrips only`;
+        } else {
+            statusText = `// ${state.cls} L${state.level} — up to LVL ${maxL} powers // ${items.length} avail`;
+        }
+    } else {
+        statusText = `// ${items.length} POWER${items.length===1?'':'S'} INDEXED`;
+    }
+    status.textContent = statusText;
+
+    if (items.length === 0) {
+        c.innerHTML = emptyState(
+            state.spellMine ? "No powers available at your current class/level. Train more, young one." :
+            state.spellLevel === "Favorites" ? "No saved powers yet. Tap ★ on any power to save it." :
+            "No matching powers found."
+        );
+        return;
+    }
+
+    // Group by level when showing All / Mine for clarity
+    const grouped = (state.spellLevel === "All" || state.spellMine);
+    let html = '';
+    if (grouped) {
+        const byLvl = {};
+        items.forEach(s => { (byLvl[s.lvl] = byLvl[s.lvl] || []).push(s); });
+        Object.keys(byLvl).sort((a,b)=>lvlOrder[a]-lvlOrder[b]).forEach(lvl => {
+            html += `<div class="section-header">// ${lvl==='Cantrip'?'Cantrips':'Level '+lvl}</div>`;
+            byLvl[lvl].forEach((s,i)=> html += spellCard(s, q, i));
+        });
+    } else {
+        items.forEach((s,i)=> html += spellCard(s, q, i));
+    }
+    c.innerHTML = html;
+}
+
+function spellCard(s, q, i) {
+    const tags = s.classes.map(cd => `<span class="class-tag">${cd}</span>`).join(' ');
+    const fk = favKey('spell', s.sw);
+    const starred = !!state.favorites[fk];
+    return `
+    <div class="data-card p-3" style="animation-delay:${Math.min(i,15)*0.02}s">
+        <div class="flex justify-between items-start gap-2 mb-1">
+            <div class="min-w-0 flex-1">
+                <span class="font-bold text-white text-base block leading-tight">${highlight(s.sw, q)}</span>
+                <span class="datapad-font text-[10px]" style="color: var(--hud-deep);">5.5e: ${highlight(s.dnd, q)}</span>
             </div>
-            <div class="text-xs font-bold mb-2 datapad-font card-desc pr-8" style="color: var(--accent);">${escapeHtml(it.dmg)}</div>
-            <p class="text-sm text-slate-400 leading-snug card-desc pr-8">${highlight(it.desc, q)}</p>
-        </div>`;
-    }
-
-    // --- RENDER: HOLOCRON ---
-    function renderHolocronFilters() {
-        const c = document.getElementById('holocron-filters');
-        const levels = ["All","Cantrip","1st","2nd","3rd","4th","5th"];
-        const hasChar = !!(state.cls && classCodeMap[state.cls]);
-
-        let html = '';
-        if (hasChar) {
-            html += `<button class="chip chip-mine ${state.spellMine?'active':''}" onclick="toggleMine()">★ My Powers</button>`;
-        }
-        html += `<button class="chip chip-fav ${state.spellLevel==='Favorites' && !state.spellMine ?'active':''}" onclick="setSpellLevel('Favorites')">★ Saved</button>`;
-        levels.forEach(l => {
-            const active = !state.spellMine && state.spellLevel === l;
-            html += `<button class="chip ${active?'active':''}" onclick="setSpellLevel('${l}')">${l}</button>`;
-        });
-        c.innerHTML = html;
-    }
-    
-    function setSpellLevel(l) { state.spellLevel = l; state.spellMine = false; saveState(); renderHolocronFilters(); renderHolocron(); }
-    function toggleMine() { state.spellMine = !state.spellMine; if (state.spellMine) state.spellLevel = "All"; saveState(); renderHolocronFilters(); renderHolocron(); }
-
-    const lvlOrder = { "Cantrip":0, "1st":1,"2nd":2,"3rd":3,"4th":4,"5th":5 };
-
-    function renderHolocron() {
-        const q = (document.getElementById('search-holocron')?.value || '').toLowerCase().trim();
-        const c = document.getElementById('holocron-container');
-
-        let items = spellData.map((item, originalIndex) => ({ ...item, originalIndex }));
-
-        if (state.spellMine && state.cls) {
-            const code = classCodeMap[state.cls];
-            const maxLvl = maxSpellLevel(state.cls, parseInt(state.level)||1);
-            if (state.cls === "Monk" || code === null) {
-                items = []; 
-            } else {
-                items = items.filter(s => {
-                    if (!s.classes.includes(code)) return false;
-                    const sl = lvlOrder[s.lvl];
-                    return sl <= maxLvl;
-                });
-            }
-        } else if (state.spellLevel === "Favorites") {
-            items = items.filter(s => state.favorites.spells.includes(s.originalIndex));
-        } else if (state.spellLevel !== "All") {
-            items = items.filter(s => s.lvl === state.spellLevel);
-        }
-
-        if (q) items = items.filter(s => (s.sw+" "+(s.dnd||"")+" "+s.desc+" "+s.lvl).toLowerCase().includes(q));
-
-        if (items.length === 0) {
-            c.innerHTML = `<div class="text-center p-8 text-slate-500"><p class="datapad-font uppercase tracking-widest text-xs">No matching powers found.</p></div>`;
-            return;
-        }
-
-        let html = '';
-        const grouped = (state.spellLevel === "All" || state.spellMine) && !q;
-        if (grouped) {
-            const byLvl = {};
-            items.forEach(s => { (byLvl[s.lvl] = byLvl[s.lvl] || []).push(s); });
-            Object.keys(byLvl).sort((a,b)=>lvlOrder[a]-lvlOrder[b]).forEach(lvl => {
-                html += `<h3 class="text-hud font-bold uppercase tracking-widest text-sm mb-3 mt-6 pl-1 border-l-2 border-hud">// ${lvl==='Cantrip'?'Cantrips':'Level '+lvl}</h3>`;
-                byLvl[lvl].forEach((s)=> html += spellCard(s, q));
-            });
-        } else {
-            items.forEach((s)=> html += spellCard(s, q));
-        }
-        c.innerHTML = html;
-    }
-
-    function spellCard(s, q) {
-        const tags = s.classes.map(cd => `<span class="class-tag">${cd}</span>`).join(' ');
-        const starred = state.favorites.spells.includes(s.originalIndex);
-        
-        return `
-        <div class="data-card p-3 clickable" onclick="openDetails('spell', ${s.originalIndex})">
-            <button class="fav-btn ${starred?'active':''}" onclick="toggleFavorite(event, 'spells', ${s.originalIndex})" aria-label="Save">
-                <svg width="20" height="20" fill="${starred?'currentColor':'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-            </button>
-            
-            ${s.dnd ? `
-            <div class="mb-3 bg-slate-900/80 border border-slate-700/50 rounded p-2 flex items-center justify-between shadow-inner rename-guide mr-8">
-                <div class="flex flex-col flex-1">
-                    <span class="text-[9px] text-slate-500 uppercase font-bold mb-0.5 tracking-wider">D&D Beyond Spell</span>
-                    <span class="text-hud datapad-font font-bold text-xs md:text-sm leading-tight">${highlight(s.dnd, q)}</span>
-                </div>
-                <div class="px-2">
-                    <svg class="w-4 h-4" style="color: var(--accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                </div>
-                <div class="flex flex-col flex-1 text-right">
-                    <span class="text-[9px] uppercase font-bold mb-0.5 tracking-wider" style="color: color-mix(in srgb, var(--accent) 80%, transparent);">Rename To</span>
-                    <span class="text-white font-bold text-xs md:text-sm leading-tight">${highlight(s.sw, q)}</span>
-                </div>
-            </div>` : ''}
-
-            <div class="card-header-block pr-8 mb-2">
-                <span class="font-bold text-white text-base block display-font leading-tight">${highlight(s.sw, q)}</span>
-                <div class="card-compact-equiv hidden">
-                    ${s.dnd ? `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">5.5e: ${highlight(s.dnd, q)}</span>` : `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">Star Wars Exclusive</span>`}
-                </div>
-                <div class="flex flex-wrap gap-2 items-center mt-2">
-                    <span class="level-badge text-[10px] font-bold px-2 py-0.5 rounded datapad-font shrink-0 uppercase tracking-widest">${s.lvl}</span>
-                    <div class="flex flex-wrap gap-1">${tags}</div>
-                </div>
+            <div class="flex items-start gap-1 shrink-0">
+                <span class="level-badge text-xs font-bold px-2 py-1 rounded datapad-font">${s.lvl}</span>
+                <button class="star-btn ${starred?'starred':''}" onclick="toggleFav('spell','${escapeHtml(s.sw).replace(/'/g,"&#39;")}')" aria-label="Save">
+                    <svg width="20" height="20" fill="${starred?'currentColor':'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                </button>
             </div>
-            
-            <p class="text-sm text-slate-400 leading-snug border-t border-slate-800 pt-2 card-desc pr-8">${highlight(s.desc, q)}</p>
-        </div>`;
-    }
+        </div>
+        <div class="flex flex-wrap gap-1 mt-1.5 mb-2">${tags}</div>
+        <p class="text-sm text-slate-400 leading-snug border-t border-slate-800 pt-2">${highlight(s.desc, q)}</p>
+    </div>`;
+}
 
-    // --- FAVORITES / LOADOUT ---
-    function toggleFavorite(event, type, index) {
-        event.stopPropagation(); 
-        const idx = state.favorites[type].indexOf(index);
-        if (idx > -1) { state.favorites[type].splice(idx, 1); } else { state.favorites[type].push(index); }
+/* ---------- FAVORITES ---------- */
+function toggleFav(type, name) {
+    const k = favKey(type, name);
+    if (state.favorites[k]) delete state.favorites[k];
+    else state.favorites[k] = true;
+    saveState();
+    if (type==='spell') renderHolocron();
+    else renderArmory();
+}
+
+/* ---------- EMPTY STATE ---------- */
+function emptyState(msg) {
+    return `<div class="empty-state">
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        <p class="datapad-font text-xs uppercase tracking-widest">${msg}</p>
+    </div>`;
+}
+
+/* ---------- SETTINGS ---------- */
+function initSettings() {
+    // Class dropdown
+    const sel = document.getElementById('set-class');
+    sel.innerHTML = `<option value="">— Select Class —</option>` +
+        classData.map(c=>`<option value="${c.dnd}">${c.dnd} → ${c.sw.split(' / ')[0]}</option>`).join('');
+
+    // Skin grid
+    const skins = [
+        { id:"rebellion", label:"Rebel", color:"#0ea5e9" },
+        { id:"empire",    label:"Empire", color:"#ef4444" },
+        { id:"mando",     label:"Mando", color:"#fbbf24" },
+        { id:"sith",      label:"Sith", color:"#dc2626" },
+        { id:"jedi",      label:"Jedi", color:"#22c55e" },
+        { id:"republic",  label:"Repub", color:"#a855f7" }
+    ];
+    const grid = document.getElementById('skin-grid');
+    grid.innerHTML = skins.map(s =>
+        `<div class="skin-swatch ${s.id===state.skin?'active':''}" style="color:${s.color};" data-skin-id="${s.id}">
+            <span class="skin-label">${s.label}</span>
+        </div>`).join('');
+    grid.querySelectorAll('.skin-swatch').forEach(el => {
+        el.addEventListener('click', () => setSkin(el.dataset.skinId, el));
+    });
+
+    // Wire inputs
+    document.getElementById('set-name').value = state.name;
+    document.getElementById('set-name').addEventListener('input', e => { state.name = e.target.value.trim(); saveState(); renderHeader(); renderRankCard(); });
+
+    sel.value = state.cls;
+    sel.addEventListener('change', e => {
+        state.cls = e.target.value;
+        saveState(); renderHeader(); renderClasses(); renderHolocronFilters(); renderHolocron(); renderRankCard();
+    });
+
+    const lvlInp = document.getElementById('set-level');
+    lvlInp.value = state.level;
+    lvlInp.addEventListener('input', e => {
+        let v = parseInt(e.target.value);
+        if (isNaN(v)) v = 1;
+        v = Math.max(1, Math.min(20, v));
+        state.level = v;
+        saveState(); renderHeader(); renderHolocron(); renderRankCard();
+    });
+
+    const scan = document.getElementById('set-scan');
+    scan.value = state.scan;
+    document.getElementById('set-scan-val').textContent = state.scan + '%';
+    scan.addEventListener('input', e => {
+        state.scan = +e.target.value;
+        document.documentElement.style.setProperty('--scanline-opacity', (state.scan/100).toFixed(2));
+        document.getElementById('set-scan-val').textContent = state.scan + '%';
         saveState();
-        if (type==='armory') renderArmory();
-        if (type==='spells') renderHolocron();
-        renderLoadout();
-    }
+    });
 
-    function renderLoadout() {
-        const container = document.getElementById('loadout-container');
-        const emptyState = document.getElementById('loadout-empty');
-        
-        if (state.favorites.armory.length === 0 && state.favorites.spells.length === 0) {
-            container.innerHTML = '';
-            emptyState.style.display = 'block';
-            return;
-        }
-        
-        emptyState.style.display = 'none';
-        let html = '';
-
-        if (state.favorites.armory.length > 0) {
-            html += `<h3 class="text-hud font-bold uppercase tracking-widest text-sm mb-3 mt-4 pl-1 border-l-2 border-hud">// Gear</h3>`;
-            state.favorites.armory.forEach(index => {
-                const item = armoryData[index];
-                if(!item) return;
-                const dndEquiv = item.dnd ? `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">5.5e: ${item.dnd}</span>` : `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">Star Wars Exclusive</span>`;
-                html += `
-                    <div class="data-card p-3 clickable" onclick="openDetails('armory', ${index})">
-                        <button class="fav-btn active" onclick="toggleFavorite(event, 'armory', ${index})">
-                            <svg width="20" height="20" fill="currentColor" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                        </button>
-                        <div class="card-header-block pr-8 mb-2">
-                            <span class="font-bold text-white text-base leading-tight display-font block">${item.sw}</span>
-                            <div class="card-compact-equiv hidden">${dndEquiv}</div>
-                            <div class="card-desc">${dndEquiv}</div>
-                        </div>
-                        <div class="text-xs font-bold mb-0 font-mono card-desc pr-8" style="color: var(--accent);">${item.dmg}</div>
-                    </div>
-                `;
-            });
-        }
-
-        if (state.favorites.spells.length > 0) {
-            html += `<h3 class="text-hud font-bold uppercase tracking-widest text-sm mb-3 mt-6 pl-1 border-l-2 border-hud">// Force Powers</h3>`;
-            state.favorites.spells.forEach(index => {
-                const spell = spellData[index];
-                if(!spell) return;
-                const dndEquiv = spell.dnd ? `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">5.5e: ${spell.dnd}</span>` : `<span class="datapad-font text-[10px] text-hud opacity-80 mt-1 block">Star Wars Exclusive</span>`;
-                html += `
-                    <div class="data-card p-3 clickable" onclick="openDetails('spell', ${index})">
-                        <button class="fav-btn active" onclick="toggleFavorite(event, 'spells', ${index})">
-                            <svg width="20" height="20" fill="currentColor" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                        </button>
-                        <div class="card-header-block pr-8 mb-2">
-                            <span class="font-bold text-white text-base block display-font leading-tight">${spell.sw}</span>
-                            <div class="card-compact-equiv hidden">${dndEquiv}</div>
-                            <div class="card-desc">${dndEquiv}</div>
-                            <div class="flex items-center mt-2">
-                                <span class="level-badge text-[10px] font-bold px-2 py-0.5 rounded datapad-font shrink-0 uppercase tracking-widest">${spell.lvl}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-        
-        container.innerHTML = html;
-    }
-
-    // --- MODALS ---
-    function openDetails(type, index) {
-        const modal = document.getElementById('details-modal');
-        const title = document.getElementById('modal-title');
-        const subtitle = document.getElementById('modal-subtitle');
-        const content = document.getElementById('modal-content');
-        let html = '';
-
-        if (type === 'class') {
-            const data = classData[index];
-            title.innerText = data.sw; subtitle.innerText = `Base Class: ${data.dnd}`;
-            html = `
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Hit Die</span>
-                        <span class="text-hud font-mono font-bold">${data.hitDie}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Primary Ability</span>
-                        <span class="text-hud font-bold text-sm">${data.primary}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded col-span-2">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Saving Throws</span>
-                        <span class="text-white text-sm">${data.saves}</span>
-                    </div>
-                </div>
-                <div class="text-slate-300 space-y-3 leading-relaxed border-t border-slate-800 pt-3">${data.fullDesc.replace(/\n/g, '<br>')}</div>
-            `;
-        } 
-        else if (type === 'armory') {
-            const data = armoryData[index];
-            title.innerText = data.sw; subtitle.innerText = data.dnd ? `Base Item: ${data.dnd}` : `Star Wars Exclusive`;
-            html = `
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Damage / AC</span>
-                        <span class="font-mono font-bold" style="color: var(--accent);">${data.dmg}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Weight / Cost</span>
-                        <span class="text-white font-mono text-sm">${data.weight} &nbsp;|&nbsp; ${data.cost}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded col-span-2">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Properties</span>
-                        <span class="text-hud text-sm font-bold">${data.props}</span>
-                    </div>
-                </div>
-                <div class="text-slate-300 space-y-3 leading-relaxed border-t border-slate-800 pt-3">${data.fullDesc.replace(/\n/g, '<br>')}</div>
-            `;
-        }
-        else if (type === 'spell') {
-            const data = spellData[index];
-            title.innerText = data.sw; subtitle.innerText = data.dnd ? `Base Spell: ${data.dnd}` : `Star Wars Exclusive`;
-            let classTags = data.classes.map(c => `<span class="class-tag">${c}</span>`).join(' ');
-            html = `
-                <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
-                    <div class="level-badge text-xs font-bold px-2 py-1 rounded datapad-font uppercase tracking-widest">${data.lvl}</div>
-                    <div class="flex gap-1">${classTags}</div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 mb-4">
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Casting Time</span>
-                        <span class="text-white text-sm font-bold">${data.cast}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Range</span>
-                        <span class="text-hud font-mono text-sm font-bold">${data.range}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Duration</span>
-                        <span class="text-white text-sm">${data.dur}</span>
-                    </div>
-                    <div class="bg-slate-900 border border-slate-700 p-2 rounded">
-                        <span class="text-[10px] text-slate-500 uppercase block font-bold">Components</span>
-                        <span class="text-white text-xs">${data.comp}</span>
-                    </div>
-                </div>
-                <div class="text-slate-300 space-y-3 leading-relaxed border-t border-slate-800 pt-3">${data.fullDesc.replace(/\n/g, '<br>')}</div>
-            `;
-        }
-
-        content.innerHTML = html;
-        modal.classList.remove('hidden'); modal.classList.add('flex');
-        setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    }
-
-    function closeDetails() {
-        const modal = document.getElementById('details-modal');
-        modal.classList.add('opacity-0');
-        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 200);
-    }
-
-    // --- NAVIGATION & SETTINGS LOGIC ---
-    function switchTab(id) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-        
-        const tabEl = document.getElementById(`tab-${id}`);
-        if(tabEl) tabEl.classList.remove('hidden');
-        const navEl = document.getElementById(`nav-${id}`);
-        if(navEl) navEl.classList.add('active');
-        
-        document.getElementById('main-content').scrollTo({top:0, behavior:'smooth'});
-    }
-
-    function toggleViewMode() {
-        const isCompact = document.body.classList.contains('view-compact');
-        setViewMode(isCompact ? 'standard' : 'compact');
-    }
-
-    function updateIdentity() {
-        const nameInput = document.getElementById('setting-callsign').value;
-        const classInput = document.getElementById('setting-class').value;
-        const levelInput = document.getElementById('setting-level').value;
-        
-        document.getElementById('level-display').innerText = levelInput;
-
-        state.name = nameInput; state.cls = classInput; state.level = levelInput; saveState();
-
-        const displayName = nameInput.trim() === "" ? "Default User" : nameInput;
-        let milestone = "Operative";
-        if (classMilestones[classInput]) milestone = classMilestones[classInput][levelInput - 1] || "Operative";
-        
-        document.getElementById('header-callsign').innerText = `${displayName} // Lvl ${levelInput} ${milestone}`;
-        
-        if(state.spellMine) { renderHolocronFilters(); renderHolocron(); }
-    }
-
-    // --- NEW: FORCE ALIGNMENT LOGIC ---
-    function updateAlignment(val) {
-        val = parseInt(val);
-        state.alignment = val;
-        
-        let theme = 'rebellion';
-        let label = 'Rebellion / Light Side';
-        let flick = 10, stat = 10, scan = 20;
-        let isDark = false;
-
-        switch(val) {
-            case 1:
-                theme = 'rebellion'; label = 'Rebellion / Light Side';
-                flick = 5; stat = 5; scan = 15;
-                break;
-            case 2:
-                theme = 'jedi'; label = 'Jedi / Force Light';
-                flick = 15; stat = 15; scan = 25;
-                break;
-            case 3:
-                theme = 'mando'; label = 'Mandalorian / Balanced';
-                flick = 30; stat = 30; scan = 40;
-                break;
-            case 4:
-                theme = 'empire'; label = 'Empire / Dark Leaning';
-                flick = 60; stat = 60; scan = 60;
-                break;
-            case 5:
-                theme = 'sith'; label = 'Sith / Dark Side Corrupted';
-                flick = 100; stat = 100; scan = 80;
-                isDark = true;
-                break;
-        }
-
-        const labelEl = document.getElementById('alignment-label');
-        if(labelEl) {
-            labelEl.innerText = label;
-            labelEl.className = `text-center text-xs font-bold mt-3 uppercase tracking-widest datapad-font text-hud`;
-        }
-        
-        setTheme(theme);
-        
-        updateVFX('flicker-intensity', flick);
-        updateVFX('static-intensity', stat);
-        updateVFX('scanline-intensity', scan);
-
-        if(isDark) {
-            document.body.classList.add('dark-side-active');
-        } else {
-            document.body.classList.remove('dark-side-active');
-        }
-
-        if(document.getElementById('vfx-flicker')) document.getElementById('vfx-flicker').value = flick;
-        if(document.getElementById('vfx-static')) document.getElementById('vfx-static').value = stat;
-        if(document.getElementById('vfx-scanlines')) document.getElementById('vfx-scanlines').value = scan;
-
+    const stat = document.getElementById('set-static');
+    stat.value = state.static;
+    document.getElementById('set-static-val').textContent = state.static + '%';
+    stat.addEventListener('input', e => {
+        state.static = +e.target.value;
+        document.documentElement.style.setProperty('--static-opacity', (state.static/100).toFixed(3));
+        document.getElementById('set-static-val').textContent = state.static + '%';
         saveState();
+    });
+
+    renderRankCard();
+}
+function setSkin(id, el) {
+    state.skin = id;
+    document.documentElement.setAttribute('data-skin', id);
+    document.querySelectorAll('.skin-swatch').forEach(s => s.classList.remove('active'));
+    if (el) el.classList.add('active');
+    saveState();
+}
+function renderRankCard() {
+    const card = document.getElementById('rank-display');
+    const t = document.getElementById('rank-title');
+    if (state.cls) {
+        const r = getMilestone(state.cls, parseInt(state.level)||1);
+        if (r) { t.textContent = r; card.classList.remove('hidden'); return; }
     }
+    card.classList.add('hidden');
+}
+function resetAll() {
+    if (!confirm("Purge all settings, character, and saved items? This cannot be undone.")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+}
 
-    function setTheme(themeName) {
-        document.body.setAttribute('data-skin', themeName);
-        document.querySelectorAll('.skin-swatch').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.getElementById(`btn-theme-${themeName}`);
-        if(activeBtn) activeBtn.classList.add('active');
+/* ---------- TAB SWITCH ---------- */
+let currentTab = 'profiles';
+let previousTab = 'profiles';
 
-        state.skin = themeName; saveState();
+function switchTab(id) {
+    if (id === 'settings' && currentTab === 'settings') {
+        id = previousTab; // Toggle back to previous tab
+    } else if (id !== 'settings') {
+        previousTab = id;
     }
+    currentTab = id;
 
-    function setViewMode(mode) {
-        if (mode === 'compact') { document.body.classList.add('view-compact'); } 
-        else { document.body.classList.remove('view-compact'); }
-        state.viewmode = mode; saveState();
-    }
-
-    function setUIScale(size) {
-        document.querySelectorAll('#btn-scale-sm, #btn-scale-md, #btn-scale-lg').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`btn-scale-${size}`).classList.add('active');
-
-        const html = document.documentElement;
-        if (size === 'sm') html.style.fontSize = '13px';
-        if (size === 'md') html.style.fontSize = '16px';
-        if (size === 'lg') html.style.fontSize = '19px';
-        state.uiscale = size; saveState();
-    }
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     
-    function updateVFX(variableName, value) {
-        const decimalValue = value / 100;
-        document.documentElement.style.setProperty(`--${variableName}`, decimalValue);
-        state[variableName.split('-')[0]] = value; saveState();
-    }
+    const tabEl = document.getElementById(`tab-${id}`);
+    if (tabEl) tabEl.classList.remove('hidden');
+    
+    const navEl = document.getElementById(`nav-${id}`);
+    if (navEl) navEl.classList.add('active');
+    
+    document.getElementById('main-content').scrollTo({top:0, behavior:'smooth'});
+}
 
-    function loadSettingsUI() {
-        const sel = document.getElementById('setting-class');
-        sel.innerHTML = `<option value="None">— Select Class —</option>` + classData.map(c=>`<option value="${c.dnd}">${c.dnd} → ${c.sw.split(' / ')[0]}</option>`).join('');
-        
-        document.getElementById('setting-callsign').value = state.name;
-        document.getElementById('setting-class').value = state.cls || "None";
-        document.getElementById('setting-level').value = state.level;
-        updateIdentity();
+/* ---------- INIT ---------- */
+function applyVisuals() {
+    if (state.skin) document.documentElement.setAttribute('data-skin', state.skin);
+    document.documentElement.style.setProperty('--scanline-opacity', (state.scan/100).toFixed(2));
+    document.documentElement.style.setProperty('--static-opacity',   (state.static/100).toFixed(3));
+}
 
-        if (state.alignment) {
-            document.getElementById('setting-alignment').value = state.alignment;
-            updateAlignment(state.alignment);
-        } else {
-            let savedTheme = state.skin;
-            if (savedTheme === 'blue') savedTheme = 'rebellion';
-            if (savedTheme === 'red') savedTheme = 'empire';
-            if (savedTheme === 'amber') savedTheme = 'mando';
-            if (savedTheme === 'green') savedTheme = 'jedi';
-            if (savedTheme) { setTheme(savedTheme); }
-        }
-
-        if (state.viewmode) { setViewMode(state.viewmode); }
-        if (state.uiscale) { setUIScale(state.uiscale); }
-        
-        ['scanline', 'flicker', 'static'].forEach(effect => {
-            const val = state[effect] || (effect==='scanline'?30:effect==='static'?50:20);
-            const slider = document.getElementById(`vfx-${effect === 'scanline' ? 'scanlines' : effect}`);
-            if(slider) slider.value = val;
-            document.documentElement.style.setProperty(`--${effect}-intensity`, val / 100);
-        });
-    }
-
-    function toggleSettings() {
-        const modal = document.getElementById('settings-modal');
-        if (modal.classList.contains('hidden')) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        } else {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-    }
-
-    // --- BOOT SEQUENCE LOGIC ---
-    let bootSkipped = false;
-    function skipBoot() {
-        if(bootSkipped) return;
-        bootSkipped = true;
-        const bootScreen = document.getElementById('boot-screen');
-        bootScreen.style.opacity = '0';
-        setTimeout(() => { bootScreen.style.display = 'none'; }, 400);
-    }
-    async function runBootSequence() {
-        if (sessionStorage.getItem('sw5e_booted')) { document.getElementById('boot-screen').style.display = 'none'; return; }
-        const bootContent = document.getElementById('boot-content');
-        const lines = ["ALLIANCE_OS v5.5.0 INITIALIZING...", "ESTABLISHING SECURE CONNECTION... [OK]", "DECRYPTING OPERATIVE PROTOCOLS... [OK]", "LOADING ARMORY DATABANKS... [OK]", "ACCESSING JEDI HOLOCRON... [WARNING: RESTRICTED]", "OVERRIDING ENCRYPTION... [OK]", "WELCOME, OPERATIVE."];
-        for (let i = 0; i < lines.length; i++) {
-            if(bootSkipped) break;
-            const p = document.createElement('div'); p.className = 'boot-line'; p.innerHTML = `> ${lines[i]}<span class="cursor"></span>`; bootContent.appendChild(p);
-            setTimeout(() => { p.style.opacity = '1'; }, 50);
-            await new Promise(r => setTimeout(r, Math.random() * 250 + 250));
-            const cursor = p.querySelector('.cursor'); if(cursor) cursor.remove();
-        }
-        if(!bootSkipped) { setTimeout(() => { sessionStorage.setItem('sw5e_booted', 'true'); skipBoot(); }, 800); }
-    }
-
-    // Initialize App
-    loadState();
-    loadSettingsUI();
-    renderClasses();
-    renderArmoryFilters();
-    renderArmory();
-    renderHolocronFilters();
-    renderHolocron();
-    renderLoadout();
-    runBootSequence();
+loadState();
+applyVisuals();
+renderHeader();
+renderClasses();
+renderArmoryFilters();
+renderArmory();
+renderHolocronFilters();
+renderHolocron();
+initSettings();
 </script>
-
 </body>
 </html>
